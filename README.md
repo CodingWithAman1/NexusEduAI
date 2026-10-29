@@ -15,18 +15,21 @@ NexusEdu tracks and integrates **LeetCode algorithmic problem-solving**, **GitHu
   - Algorithmic Topic Mastery (Dynamic Programming, Graphs, Binary Search, Trees, Arrays).
   - Acceptance rate, global ranking, and contest rating.
   - Recent submissions list with status tags (*Accepted*, *Time Limit Exceeded*, etc.).
-  - Search any LeetCode username live on demand.
 - **GitHub Portfolio Tracker**:
   - Public repositories, stars count, total annual commits, and commit streaks.
   - Language composition analysis (TypeScript, Python, C++, Go, etc.) with official color accents.
   - Recent commit history and activity stream.
+- **Unified 90-Day Dual Activity Calendar**:
+  - Synchronizes daily LeetCode submissions (⚡) and GitHub commits (🐙) day-by-day.
+  - 7-Column calendar layout with month navigator tabs (August, September, October 2026).
+  - Fixed-position viewport tooltips with boundary clamping.
 - **College Assignments Tracker**:
   - Deadlines countdown with priority indicators (*Due Today*, *Pending*, *Submitted*, *Graded*).
   - 1-Click Assignment submission with GitHub repository link & notes.
   - Early submission bonus: Awards **+120 XP** and **+60 ByteCoins** upon submission.
   - Real-time review of faculty grades and qualitative feedback.
 - **Personalized Profile & Customization**:
-  - Target Dream Company (e.g., Google, Meta, Apple) & Dream Role (e.g., Senior SDE-1).
+  - Target Dream Company (e.g., Google, Meta, Amazon) & Dream Role (e.g., Senior SDE-1).
   - Bio, academic department, semester, and college roll number.
 
 ---
@@ -35,14 +38,16 @@ NexusEdu tracks and integrates **LeetCode algorithmic problem-solving**, **GitHu
 - **Multimodal Industry Readiness Index (0 - 100%)**:
   - Synthesizes DSA Problem Solving, GitHub Codebase Hygiene, and College Academic Compliance into a single placement score.
   - Tier Classification: *Diamond Pioneer*, *Platinum Dev*, *Gold Striker*, *Silver Explorer*.
-- **Skill Gap & Weakness Detector**:
-  - Flags weak areas (e.g., low hard problem ratio in Dynamic Programming, commit slowdowns, impending assignment deadlines).
-- **7-Day Personalized Action Plan**:
-  - Day-by-day task checklist with urgency flags and estimated time allocations.
+- **Interactive AI Code Arena**:
+  - **🔥 Roast My Code**: Witty, senior engineer roast with deep technical feedback and Engineering Score.
+  - **⚡ Turbo Optimize**: Automatic Big-O leap detection ($O(2^N) \to O(N)$, $O(N^2) \to O(N)$) with clean production rewrites.
+  - **💥 Adversarial Edge Cases**: 5 lethal edge cases with inputs, crash reasons, and defensive guard code.
+  - **💡 Explain Code**: Line-by-line mental model breakdown.
+- **FAANG Mock Interview Challenge Simulator**:
+  - Company-specific rounds (Google, Meta, Amazon, Microsoft, Netflix) across DP, Graphs, System Design, Sliding Window, and Concurrency.
+  - Real-time bar-raiser evaluation grading logic, Big-O, and edge cases, awarding verified XP and ByteCoins!
 - **AI Assignment Tutor**:
   - For any college assignment, provides conceptual breakdowns, algorithmic strategies, corner cases/pitfalls, and starter code scaffolds.
-- **AI Resume & Portfolio Impact Bullet Generator**:
-  - Formulates quantifiable STAR-method bullet points based on the student's actual achievements for software engineering resumes.
 
 ---
 
@@ -69,40 +74,12 @@ NexusEdu tracks and integrates **LeetCode algorithmic problem-solving**, **GitHu
   - High-priority urgent notices flash with pulsing alerts on all student dashboards.
 - **Assignment Publisher**:
   - Set course codes, deadlines, point weights, problem difficulty, and topic tags.
+  - AI-assisted assignment drafting with starter boilerplate and grading rubrics.
 - **Cohort Submissions & Grading Queue**:
   - Review student code links, solution notes, and timestamp.
-  - Grade submissions and provide qualitative feedback recorded in the SQL database.
+  - Run AI auto-evaluation to draft rubric scores and qualitative feedback recorded in the SQL database.
 - **Campus Leaderboard**:
   - Cohort-wide student rankings with podium badges (🥇 🥈 🥉), level, XP, LeetCode solved count, GitHub commits, and GPA.
-
----
-
-### 🔐 5. Authentication (Firebase Auth & Sign Up / Sign In Pages)
-- **Dedicated Sign Up Page (`/signup`)**:
-  - Full Name, Student vs Faculty role, College ID, Email, and Password.
-  - Built-in Developer Handle Onboarding: Connect personal LeetCode and GitHub handles during signup so dashboards populate immediately.
-- **Dedicated Sign In Page (`/login`)**:
-  - 1-Click Google OAuth Popup via Firebase Auth (`firebase.auth().signInWithPopup`).
-  - Email & Password login with automated local session fallback (`/api/auth/login-local`).
-  - 1-Click Demo Login as Student (*Alex Rivera*) or Faculty (*Dr. Sarah Vance*).
-- **Persistent Header Navigation**:
-  - Direct links to **Sign In**, **Sign Up**, and **Sign Out** (`/logout`) accessible across the Landing Portal and Dashboards.
-
-### 🔗 6. Personal LeetCode & GitHub Handle Connection
-- **Connect Accounts Modal**:
-  - Step-by-step connection for personal LeetCode and GitHub handles.
-  - Live **Verify Handle** feature: checks real-time reachability, problem count, rank, and repository stats.
-  - Awards **+100 XP** and **+50 ByteCoins** upon successful profile synchronization.
-  - 1-Click test presets for Neal Wu, Linus Torvalds, Tourist, and Dan Abramov.
-- **Persistent Developer Handles Banner**:
-  - Prominent banner on the dashboard showing currently connected handles and 1-click sync button.
-
-### 🗓️ 7. Unified Dev & Algorithmic Activity Matrix (Dual Calendar)
-- **60-Day Synchronized Heatmap**:
-  - Merges LeetCode algorithmic solutions and GitHub commits day-by-day.
-  - 4 View Modes: **Combined Matrix**, **Parallel Dual-Track**, **LeetCode Only**, **GitHub Only**.
-  - Interactive **Day Inspector**: Click any cell to view exact daily problem breakdown, commit counts, XP earned, and ByteCoin rewards.
-  - Cross-platform correlation index highlighting consistent dev velocity.
 
 ---
 
@@ -110,56 +87,145 @@ NexusEdu tracks and integrates **LeetCode algorithmic problem-solving**, **GitHu
 
 | Layer | Technology |
 |---|---|
-| **Backend** | Python 3.13, Flask 3.1, Flask-CORS, Requests |
-| **Database** | SQL (SQLite3) with relational schema & foreign keys |
-| **Frontend** | HTML5, Modern CSS3 (Glassmorphism & Cyberpunk Design System), Vanilla JavaScript |
+| **Backend** | Python 3.13, Flask 3.1, Werkzeug (ProxyFix & Scrypt/SHA256), Requests |
+| **WSGI Server** | Gunicorn (Linux/Cloud), Waitress (Windows) |
+| **Database** | SQL (SQLite3) with relational schema, foreign keys & ACID transactions |
+| **Frontend** | HTML5, Modern CSS3 (Glassmorphism & Cyberpunk tokens), Vanilla JavaScript (ES6+) |
 | **Styling & UI** | Tailwind CSS (CDN), Custom CSS Variables & Animations |
 | **Visualizations** | Chart.js (Doughnut charts, topic mastery) |
-| **Authentication** | Firebase Auth (Google OAuth & Email/Pass) + Flask Sessions |
+| **AI Engine** | Google Gemini 2.0 Flash (`google-genai` SDK) + Local AST Heuristic Engine |
+| **Authentication** | Cryptographic HTTPOnly Session Cookies + Firebase Auth (Google OAuth) |
 | **Special Effects** | Canvas Confetti, Web Audio API synthetic chimes |
 
 ---
 
-## 🚀 Quick Start Guide
+## 🌐 Production Deployment Guide
 
-### 1. Install Dependencies
+### Option 1: 1-Click Deploy on Render.com (Recommended)
+1. Fork or push this repository to your GitHub account (`https://github.com/CodingWithAman1/NexusEduAI.git`).
+2. Log in to [Render.com](https://render.com) and click **New +** ➔ **Web Service**.
+3. Connect your GitHub repository.
+4. Render automatically detects [`render.yaml`](render.yaml) or use these settings:
+   - **Environment**: `Python`
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Start Command**: `gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120`
+   - **Health Check Path**: `/health`
+5. Under **Environment Variables**, add:
+   - `SECRET_KEY`: `<generate-a-random-32-byte-hex-string>`
+   - `APP_ENV`: `production`
+   - `COOKIE_SECURE`: `false` (or `true` if your domain uses HTTPS)
+   - `GEMINI_API_KEY`: *(Optional)* Your Google Gemini API Key
+6. Click **Deploy Web Service**! Your live URL will be active in ~2 minutes.
+
+---
+
+### Option 2: Deploy with Docker & Docker Compose
+The repository includes a production-hardened multi-stage [`Dockerfile`](Dockerfile) and [`docker-compose.yml`](docker-compose.yml).
+
+1. **Build and Run with Docker Compose**:
 ```bash
+docker compose up --build -d
+```
+2. **Or build and run standard Docker container**:
+```bash
+docker build -t nexusedu-ai .
+docker run -d -p 5000:5000 --name nexusedu-app -e APP_ENV=production -v $(pwd)/campus_nexus.db:/app/campus_nexus.db nexusedu-ai
+```
+3. Verify container health:
+```bash
+curl http://localhost:5000/health
+# Returns: {"database": "connected", "platform": "NexusEdu AI", "status": "healthy", "version": "2.4.0"}
+```
+
+---
+
+### Option 3: Deploy on Railway.app
+1. Go to [Railway.app](https://railway.app) and select **New Project** ➔ **Deploy from GitHub Repo**.
+2. Railway detects [`Procfile`](Procfile) and [`requirements.txt`](requirements.txt) automatically.
+3. In the Railway dashboard under **Variables**, set:
+   - `APP_ENV=production`
+   - `SECRET_KEY=<your-secret-key>`
+4. Set the Healthcheck path to `/health`. Deployment completes automatically!
+
+---
+
+### Option 4: Linux / Ubuntu VPS (Nginx + Gunicorn + Systemd)
+1. **Clone and setup virtual environment**:
+```bash
+sudo apt update && sudo apt install python3-pip python3-venv git -y
+git clone https://github.com/CodingWithAman1/NexusEduAI.git /var/www/nexusedu
+cd /var/www/nexusedu
+python3 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
 ```
+2. **Create a Systemd Service** (`/etc/systemd/system/nexusedu.service`):
+```ini
+[Unit]
+Description=NexusEdu AI Gunicorn Service
+After=network.target
 
-### 2. Run locally
-On Windows, use `run.bat`. It creates a random development-only session secret for that run and serves the app over HTTP on your machine.
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/nexusedu
+Environment="PATH=/var/www/nexusedu/venv/bin"
+Environment="APP_ENV=production"
+ExecStart=/var/www/nexusedu/venv/bin/gunicorn wsgi:app --bind 127.0.0.1:5000 --workers 3 --threads 4
 
-For a direct launch, set a session secret first:
+[Install]
+WantedBy=multi-user.target
+```
+3. Start and enable service:
 ```bash
-set SECRET_KEY=<a-long-random-secret>
-python app.py
+sudo systemctl daemon-reload
+sudo systemctl start nexusedu
+sudo systemctl enable nexusedu
 ```
 
-### 3. Open in Browser
-Visit **[http://127.0.0.1:5000](http://127.0.0.1:5000)** in your browser!
+---
 
-### Production configuration
-Set a stable, randomly generated `SECRET_KEY`, `APP_ENV=production`, and `FACULTY_INVITE_CODE` in the deployment environment. Production cookies are then Secure and only invited faculty can register with faculty access. Do not expose the development server; run behind HTTPS with a production WSGI server, for example `waitress-serve --listen=127.0.0.1:8080 app:app`, and place a TLS reverse proxy in front of it. Persist and back up the SQLite database and uploads directory.
+### Option 5: Local Windows Development
+1. Double-click [`run.bat`](run.bat) or run:
+```bash
+pip install -r requirements.txt
+python app.py
+```
+2. Open **[http://127.0.0.1:5000](http://127.0.0.1:5000)** in your browser!
 
-Local email/password accounts are stored with a password hash. Public registration is student-only unless an invitation code is configured. Firebase sign-in is disabled until server-side Firebase token verification is configured; Firebase client settings alone do not establish a trusted session. Set `GEMINI_API_KEY` to enable live Gemini features. Seeded demo profiles are showcase data and cannot be used to sign in. Existing accounts created before password authentication must register with a new email or be migrated by an administrator.
+---
+
+## 🔑 Default Production Baseline Accounts
+
+The database comes pre-configured with a clean verified baseline (zero dummy assignments or clutter):
+
+| Role | Username / Email | Password | Access Level |
+|---|---|---|---|
+| **Faculty Admin** | `faculty@12345` | `password123` | Full Coursework, Grading & Announcement Access |
+| **Student** | `funwithcode8630@gmail.com` | `password123` | Section A, Connected to @CodingWithAman1 |
+| **Student** | `shruti.sharma6386@gmail.com` | `password123` | Section A Student Portal |
 
 ---
 
 ## 📂 Project Directory Structure
 
 ```
+├── wsgi.py                    # Production WSGI server entrypoint
+├── Procfile                   # Cloud process execution rule (Gunicorn)
+├── Dockerfile                 # Production Docker container image definition
+├── docker-compose.yml         # Container orchestration with volume mounts
+├── render.yaml                # Render.com 1-Click deployment blueprint
 ├── app.py                     # Main Flask application & REST API routes
-├── config.py                  # Database & Firebase configuration
+├── config.py                  # Database, session & Firebase configuration
 ├── requirements.txt           # Python package dependencies
 ├── campus_nexus.db            # SQLite database file (auto-initialized)
 ├── database/
 │   ├── schema.sql             # Relational SQL schema definitions
-│   └── db.py                  # Database connection, init, and seed data
+│   └── db.py                  # Database connection, init, and migrations
 ├── services/
 │   ├── leetcode_service.py    # LeetCode public API & algorithmic metrics
 │   ├── github_service.py      # GitHub REST API & language composition
-│   ├── ai_service.py          # AI diagnostic engine & assignment assistant
+│   ├── ai_service.py          # AI diagnostic engine, Arena & FAANG interviewer
 │   └── gamification_service.py# XP, ByteCoins, levels & rewards calculation
 ├── static/
 │   ├── css/
@@ -173,5 +239,8 @@ Local email/password accounts are stored with a password hash. Public registrati
 ├── templates/
 │   ├── landing.html           # Landing entrance portal for choosing student vs college
 │   ├── auth.html              # Dedicated Sign In & Sign Up authentication page
+│   ├── faculty.html           # Dedicated College & Faculty Management Dashboard
 │   └── index.html             # Master responsive Single Page Application
+├── NexusEdu_AI_Mini_Project_Presentation.pdf   # 15-Slide Presentation (PDF)
+└── NexusEdu_AI_Mini_Project_Presentation.pptx  # Source Presentation Deck (PPTX)
 ```

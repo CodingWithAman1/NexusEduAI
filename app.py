@@ -25,9 +25,15 @@ from services.gamification_service import (
     get_achievements_with_progress, claim_achievement_reward
 )
 
+from werkzeug.middleware.proxy_fix import ProxyFix
+
 app = Flask(__name__)
 app.config.from_object(Config)
 app.permanent_session_lifetime = timedelta(days=7)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+
+# Ensure uploads root folder exists on startup
+os.makedirs(os.path.join(app.root_path, 'uploads'), exist_ok=True)
 
 with app.app_context():
     init_db()
@@ -98,6 +104,27 @@ def faculty_required(f):
 
 def student_required(f):
     return role_required('student')(f)
+
+# ==================== CLOUD READINESS & HEALTH CHECK ====================
+@app.route('/health')
+@app.route('/api/health')
+def health_check():
+    """Liveness and readiness probe for cloud hosting and reverse proxies."""
+    try:
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute("SELECT 1")
+        conn.close()
+        db_ok = True
+    except Exception:
+        db_ok = False
+
+    return jsonify({
+        'status': 'healthy' if db_ok else 'degraded',
+        'database': 'connected' if db_ok else 'disconnected',
+        'platform': 'NexusEdu AI',
+        'version': '2.4.0'
+    }), 200 if db_ok else 503
 
 # ==================== PAGE ROUTES ====================
 @app.route('/')

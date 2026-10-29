@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - APP_ENV=production
+      - COOKIE_SECURE=false
+      - FACULTY_INVITE_CODE=FACULTY2026
+    volumes:
+      - ./campus_nexus.db:/app/campus_nexus.db
+      - ./uploads:/app/uploads
+    restart: unless-stopped
