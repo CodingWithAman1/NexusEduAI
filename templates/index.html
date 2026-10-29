@@ -1,0 +1,1476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexusEdu AI - Unified Student & Campus Intelligence Hub</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236366f1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polygon points='12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2'></polygon></svg>">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            950: '#070a13'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="theme-{{ user.equipped_theme or 'cyberpunk' }} min-h-screen flex flex-col bg-slate-950 text-slate-100">
+
+    <!-- ==================== LIVELY APP LOADING SCREEN ==================== -->
+    <div id="app-loading-screen">
+        <div class="loader-glow-orb"></div>
+        <div class="relative flex flex-col items-center">
+            <div class="relative w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-cyan-400 p-0.5 shadow-2xl shadow-indigo-500/40 mb-4">
+                <div class="loader-spin-ring"></div>
+                <div class="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
+                    <svg class="w-8 h-8 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <h2 class="text-xl font-extrabold tracking-tight bg-gradient-to-r from-white via-indigo-100 to-indigo-400 bg-clip-text text-transparent">
+                    NexusEdu AI
+                </h2>
+                <span class="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Student</span>
+            </div>
+            <p class="text-xs text-slate-400 mt-1.5 font-medium tracking-wide">Syncing LeetCode, GitHub & Coursework Matrix...</p>
+            
+            <div class="loader-progress-track">
+                <div class="loader-progress-bar"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.CURRENT_USER = {{ user | tojson | safe }};
+        window.FIREBASE_CONFIG = {{ firebase_config | tojson | safe }};
+        window.INITIAL_TAB = "{{ initial_tab or 'overview' }}";
+    </script>
+
+    <!-- ==================== TOP NAVIGATION BAR ==================== -->
+    <header class="sticky top-0 z-40 bg-slate-950/85 backdrop-blur-xl border-b border-white/10 px-4 lg:px-8 py-3">
+        <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
+            
+            <!-- Brand Logo with Back to Landing Portal link -->
+            <div class="flex items-center gap-3">
+                <a href="/" class="flex items-center gap-2 group" title="Return to Landing Entrance Portal">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-cyan-400 p-0.5 shadow-lg shadow-indigo-500/30">
+                        <div class="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
+                            <svg class="w-5 h-5 text-indigo-400 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="font-extrabold text-lg tracking-tight bg-gradient-to-r from-white via-indigo-100 to-indigo-400 bg-clip-text text-transparent">NexusEdu AI</span>
+                            <span class="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider {{ 'bg-purple-500/20 text-purple-300 border border-purple-500/30' if user.role == 'faculty' else 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' }}">
+                                {{ user.role }}
+                            </span>
+                        </div>
+                        <p class="text-[11px] text-slate-400 hidden sm:block">Unified LeetCode, GitHub & Campus Intelligence</p>
+                    </div>
+                </a>
+
+                <!-- Back to Landing Link Pill -->
+                <a href="/" class="hidden xl:inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-900 hover:bg-slate-800 text-[11px] font-semibold text-slate-300 border border-white/10 transition-colors">
+                    <span>🏠 Landing Hub</span>
+                </a>
+            </div>
+
+            <!-- Pitch Presentation Button & Badges -->
+            <div class="flex items-center gap-2 sm:gap-3">
+                
+                <!-- Daily Streak Badge -->
+                <button type="button" onclick="handleClaimStreak()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs font-bold hover:bg-rose-500/20 transition-all" title="Claim daily streak reward">
+                    <span class="flame-anim text-sm">🔥</span>
+                    <span id="hero-streak-count">{{ user.streak_days }}d Streak</span>
+                </button>
+
+                <!-- ByteCoins Badge -->
+                <button type="button" onclick="switchTab('shop')" aria-label="Open ByteCoin shop" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-bold hover:bg-amber-500/20 transition-all glow-gold">
+                    <span class="text-sm">🪙</span>
+                    <span id="nav-coins-badge">{{ user.coins }}</span>
+                    <span class="text-[10px] text-amber-400 uppercase hidden md:inline">Coins</span>
+                </button>
+
+                <!-- XP & Level Badge -->
+                <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-xs font-medium">
+                    <span id="nav-level-badge" class="px-1.5 py-0.5 rounded bg-indigo-600 text-white font-extrabold text-[11px]">Lvl {{ user.level }}</span>
+                    <span id="nav-xp-badge" class="text-indigo-300 font-mono">{{ user.xp }} XP</span>
+                </div>
+
+                <!-- 1-Click Sync Button -->
+                <button onclick="refreshAllStats()" class="p-2 rounded-xl bg-slate-900 border border-white/10 text-slate-300 hover:text-white hover:border-indigo-500/40 transition-colors" title="Sync LeetCode & GitHub stats live">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                </button>
+
+                <!-- Connect Developer Handles Button -->
+                <button onclick="openConnectAccountsModal()" class="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600/30 to-purple-600/30 hover:from-indigo-600/50 hover:to-purple-600/50 text-indigo-200 border border-indigo-500/30 font-bold text-xs transition-all shadow-sm">
+                    <span>🔗 Connect Handles</span>
+                </button>
+
+                <!-- Dedicated Student Portal & Section Indicator -->
+                <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900 border border-indigo-500/30 text-xs">
+                    <span class="text-indigo-400 font-extrabold flex items-center gap-1.5">
+                        <span>🎓</span>
+                        <span>Student Portal</span>
+                    </span>
+                    <span class="text-slate-600">•</span>
+                    <span class="text-cyan-300 font-bold px-2 py-0.5 rounded-md bg-cyan-500/10 border border-cyan-500/30 text-[11px]">{{ user.section or 'Section A' }}</span>
+                </div>
+
+                <!-- User Profile & Authentication Dropdown -->
+                <div class="relative group pl-2 border-l border-white/10">
+                    <button id="account-menu-trigger" type="button" onclick="toggleAccountMenu(event)" aria-haspopup="true" aria-expanded="false" class="flex items-center gap-2 p-1 rounded-xl hover:bg-white/5 transition-colors">
+                        <img src="{{ user.avatar_url }}" alt="{{ user.display_name }}" class="user-avatar-img w-9 h-9 rounded-xl bg-slate-800 p-0.5 border border-indigo-500/40">
+                        <div class="hidden lg:block text-left text-xs leading-tight">
+                            <span class="block font-bold text-white truncate max-w-[100px]">{{ user.display_name }}</span>
+                            <span class="text-[10px] text-slate-400 font-mono">{{ user.role }}</span>
+                        </div>
+                        <svg class="w-3 h-3 text-slate-400 hidden lg:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+
+                    <!-- Account Menu -->
+                    <div id="account-menu" class="absolute right-0 mt-2 w-64 rounded-2xl glass-dropdown p-2.5 hidden group-hover:block transition-all z-50 shadow-2xl border border-indigo-500/30">
+                        <div class="px-3 py-2 border-b border-white/10 mb-1">
+                            <p class="font-bold text-xs text-white">{{ user.display_name }}</p>
+                            <p class="text-[11px] text-slate-400 truncate">{{ user.email }}</p>
+                            <div class="mt-2 text-[10px] text-slate-400 space-y-0.5 font-mono">
+                                <p>⚡ LC: <span class="text-amber-400 font-bold">{% if user.leetcode_username %}@{{ user.leetcode_username }}{% else %}Not Connected{% endif %}</span></p>
+                                <p>🐙 GH: <span class="text-cyan-400 font-bold">{% if user.github_username %}@{{ user.github_username }}{% else %}Not Connected{% endif %}</span></p>
+                            </div>
+                        </div>
+
+                        <button onclick="openConnectAccountsModal()" class="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold hover:bg-indigo-600/20 text-indigo-300 flex items-center gap-2">
+                            <span>🔗 Connect LeetCode & GitHub</span>
+                        </button>
+                        <button onclick="openProfileModal()" class="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold hover:bg-white/10 text-slate-200 flex items-center gap-2">
+                            <span>⚙️ Profile Settings</span>
+                        </button>
+                        <div class="border-t border-white/10 my-1.5"></div>
+
+                        <a href="/login?switch=1" class="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold hover:bg-white/10 text-slate-300 flex items-center gap-2">
+                            <span>🔑 Switch / Sign In Account</span>
+                        </a>
+                        <a href="/signup?switch=1" class="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold hover:bg-white/10 text-slate-300 flex items-center gap-2">
+                            <span>➕ Create New Account</span>
+                        </a>
+                        <a href="/logout" class="w-full text-left px-3 py-2 rounded-xl text-xs font-bold hover:bg-rose-950/40 text-rose-400 flex items-center gap-2">
+                            <span>🚪 Sign Out</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Explicit Direct Sign Out Link Pill -->
+                <a href="/logout" class="hidden sm:inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-rose-950/40 text-[11px] font-bold text-slate-400 hover:text-rose-300 border border-white/10 hover:border-rose-500/30 transition-all" title="Sign out of current account">
+                    <span>Sign Out</span>
+                </a>
+
+            </div>
+
+        </div>
+    </header>
+
+    <!-- ==================== HERO EQUIPPED COSMETICS HEADER ==================== -->
+    <div class="max-w-7xl mx-auto w-full px-4 lg:px-8 mt-6">
+        <div id="user-profile-banner" class="relative rounded-2xl p-6 md:p-8 overflow-hidden shadow-2xl transition-all duration-700 border border-white/10" style="background: {{ user.banner_url }};">
+            <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/80 to-slate-950/40"></div>
+
+            <div class="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                
+                <!-- Left: Student Identity & Live Dev Handles -->
+                <div class="flex flex-col sm:flex-row items-start sm:items-center gap-5">
+                    <div class="relative group shrink-0">
+                        <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-slate-950 p-2 border-2 border-indigo-500/60 shadow-2xl shadow-indigo-500/30 flex items-center justify-center glow-primary">
+                            <img src="{{ user.avatar_url }}" alt="{{ user.display_name }}" class="user-avatar-img w-full h-full object-contain">
+                        </div>
+                        <button onclick="switchTab('shop')" class="absolute -bottom-2 -right-2 p-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg text-xs transition-transform active:scale-90" title="Change Avatar & Wardrobe in Shop">
+                            🛍️
+                        </button>
+                    </div>
+
+                    <div>
+                        <div class="flex flex-wrap items-center gap-2 mb-1">
+                            <h1 class="text-2xl md:text-3xl font-extrabold text-white tracking-tight">{{ user.display_name }}</h1>
+                            <span class="user-title-text px-3 py-0.5 rounded-full text-xs font-extrabold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 shadow-sm">
+                                « {{ user.equipped_title }} »
+                            </span>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2 text-xs text-slate-300 font-mono mb-2">
+                            <span>{{ user.department }}</span>
+                            <span class="text-slate-500">•</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">🏫 {{ user.section or 'Section A' }}</span>
+                            <span class="text-slate-500">•</span>
+                            <span>Roll: {{ user.college_id }}</span>
+                            <span class="text-slate-500">•</span>
+                            <span>Semester {{ user.semester }}</span>
+                        </div>
+                        <p class="text-xs text-slate-300 mb-3">
+                            🎯 Targeting: <span class="text-cyan-300 font-semibold">{{ user.target_role }}</span> at <span class="text-amber-300 font-semibold">{{ user.target_company }}</span>
+                        </p>
+
+                        <!-- Integrated Live Dev Handles Badges -->
+                        <div class="flex flex-wrap items-center gap-2 text-xs">
+                            <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-950/80 border border-amber-500/30 text-amber-300 font-mono shadow-sm">
+                                <span>⚡</span>
+                                <span class="text-slate-400 text-[11px]">LeetCode:</span>
+                                <strong class="text-white" id="status-lc-username">{% if user.leetcode_username %}@{{ user.leetcode_username }}{% else %}<span class="text-slate-400 font-normal">Not Connected</span>{% endif %}</strong>
+                            </div>
+                            <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-950/80 border border-cyan-500/30 text-cyan-300 font-mono shadow-sm">
+                                <span>🐙</span>
+                                <span class="text-slate-400 text-[11px]">GitHub:</span>
+                                <strong class="text-white" id="status-gh-username">{% if user.github_username %}@{{ user.github_username }}{% else %}<span class="text-slate-400 font-normal">Not Connected</span>{% endif %}</strong>
+                            </div>
+                            <button onclick="openConnectAccountsModal()" class="px-2.5 py-1 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white border border-white/10 text-[11px] font-semibold transition-colors flex items-center gap-1" title="Change LeetCode or GitHub username">
+                                <span>✏️ Edit</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Action Suite with 24-Hour Mystery Chest -->
+                <div class="flex flex-wrap items-center gap-2.5 self-start lg:self-center">
+                    <button id="hero-chest-btn" onclick="handleOpenMysteryChest()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 text-xs font-extrabold shadow-lg shadow-yellow-500/25 flex items-center gap-2 transition-all glow-gold active:scale-95 cursor-pointer">
+                        <span id="hero-chest-text">🎁 Open Mystery Chest</span>
+                    </button>
+                    <button onclick="switchTab('ai-hub')" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md shadow-indigo-600/30 flex items-center gap-1.5 transition-all active:scale-95">
+                        <svg class="w-3.5 h-3.5 text-cyan-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                        <span>AI Readiness</span>
+                    </button>
+                    <button onclick="openProfileModal()" class="px-3 py-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-300 border border-white/10 text-xs font-semibold transition-all">
+                        ⚙️ Profile
+                    </button>
+                    <button onclick="refreshAllStats()" class="px-3 py-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-300 text-xs font-semibold border border-white/10 transition-colors" title="Sync live stats right now">
+                        🔄 Sync
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Mystery Drop Reveal Notification -->
+    <div id="mystery-drop-reveal" class="max-w-7xl mx-auto w-full px-4 lg:px-8 mt-4 hidden"></div>
+
+    <!-- ==================== MAIN CONTENT WRAPPER ==================== -->
+    <div class="max-w-7xl mx-auto w-full px-4 lg:px-8 py-6 flex-1 flex flex-col md:flex-row gap-6">
+
+        <!-- Sidebar Navigation -->
+        <aside aria-label="Student navigation" class="dashboard-nav w-full md:w-64 shrink-0 flex flex-row md:flex-col gap-2 overflow-x-auto md:overflow-visible pb-2 md:pb-0">
+            
+            <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-3 hidden md:block mt-2 mb-1">Student Hub</p>
+
+            <button onclick="switchTab('overview')" data-tab="overview" class="nav-tab-btn active w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-300 hover:text-white hover:bg-white/5 transition-all text-left whitespace-nowrap">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                <span>Dashboard Overview</span>
+            </button>
+
+            <button onclick="switchTab('leetcode')" data-tab="leetcode" class="nav-tab-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-300 hover:text-white hover:bg-white/5 transition-all text-left whitespace-nowrap">
+                <svg class="w-4 h-4 text-amber-400" fill="currentColor" viewBox="0 0 24 24"><path d="M16.102 17.93l-2.697 2.607c-.466.467-1.111.662-1.823.662s-1.357-.195-1.824-.662l-4.332-4.363c-.467-.467-.702-1.15-.702-1.863s.235-1.357.702-1.824l4.319-4.38c.467-.467 1.125-.645 1.837-.645s1.357.195 1.823.662l2.697 2.606c.514.515 1.365.497 1.9-.038.535-.536.553-1.387.039-1.901l-2.609-2.636a5.21 5.21 0 00-3.85-1.385c-1.464 0-2.884.573-3.85 1.54l-4.332 4.363c-1.01 1.01-1.573 2.378-1.573 3.824s.563 2.814 1.573 3.824l4.332 4.363c.966.967 2.386 1.54 3.85 1.54 1.465 0 2.885-.573 3.85-1.54l2.609-2.636c.514-.514.496-1.365-.039-1.901-.535-.535-1.386-.553-1.9.038z"></path></svg>
+                <span>LeetCode Tracker</span>
+            </button>
+
+            <button onclick="switchTab('github')" data-tab="github" class="nav-tab-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-300 hover:text-white hover:bg-white/5 transition-all text-left whitespace-nowrap">
+                <svg class="w-4 h-4 text-cyan-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"></path></svg>
+                <span>GitHub Portfolio</span>
+            </button>
+
+            <button onclick="switchTab('assignments')" data-tab="assignments" aria-controls="tab-view-assignments" class="nav-tab-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-300 hover:text-white hover:bg-white/5 transition-all text-left whitespace-nowrap">
+                <div class="flex items-center gap-3">
+                    <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    <span>Assignments</span>
+                </div>
+                <span id="pending-assignments-badge" class="hidden px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-500/20 text-rose-300 border border-rose-500/30" aria-label="Assignments needing attention">0</span>
+            </button>
+
+            <button onclick="switchTab('ai-hub')" data-tab="ai-hub" class="nav-tab-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-300 hover:text-white hover:bg-white/5 transition-all text-left whitespace-nowrap">
+                <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+                <span>AI Intelligence Hub</span>
+            </button>
+
+            <button onclick="switchTab('shop')" data-tab="shop" class="nav-tab-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-300 hover:text-white hover:bg-white/5 transition-all text-left whitespace-nowrap">
+                <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
+                <span>Shop & Achievements</span>
+            </button>
+
+            <button onclick="switchTab('leaderboard')" data-tab="leaderboard" class="nav-tab-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-300 hover:text-white hover:bg-white/5 transition-all text-left whitespace-nowrap">
+                <svg class="w-4 h-4 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                <span>Campus Leaderboard</span>
+            </button>
+
+
+
+        </aside>
+
+        <!-- Dynamic Main Views Area -->
+        <main class="flex-1 min-w-0">
+
+            <!-- ==================== TAB 1: OVERVIEW ==================== -->
+            <div id="tab-view-overview" class="tab-view-content space-y-6">
+                
+                <!-- Quick Metric Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    
+                    <div onclick="switchTab('leetcode')" class="glass-panel p-5 cursor-pointer glass-panel-hover">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs text-slate-400 font-semibold uppercase">LeetCode Solved</span>
+                            <span id="lc-source-badge" class="text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">⚡ Live GraphQL</span>
+                        </div>
+                        <div class="flex items-baseline gap-2">
+                            <h3 class="text-2xl font-extrabold text-white" id="lc-total-solved">--</h3>
+                            <span class="text-xs text-emerald-400 font-bold" id="lc-acceptance-rate">--% acc</span>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-2 font-mono" id="lc-global-rank">Rank #--</p>
+                    </div>
+
+                    <div onclick="switchTab('github')" class="glass-panel p-5 cursor-pointer glass-panel-hover">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs text-slate-400 font-semibold uppercase">GitHub Activity</span>
+                            <span id="gh-source-badge" class="text-[10px] px-2 py-0.5 rounded-full font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">🐙 Live REST API</span>
+                        </div>
+                        <div class="flex items-baseline gap-2">
+                            <h3 class="text-2xl font-extrabold text-white" id="gh-total-commits">--</h3>
+                            <span class="text-xs text-cyan-400 font-bold" id="gh-current-streak">--d streak</span>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-2 font-mono"><span id="gh-public-repos">--</span> Repos • <span id="gh-total-stars">--</span> Stars</p>
+                    </div>
+
+                    <div onclick="switchTab('assignments')" class="glass-panel p-5 cursor-pointer glass-panel-hover">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs text-slate-400 font-semibold uppercase">Assignments</span>
+                            <span class="text-indigo-400 text-base">📝</span>
+                        </div>
+                        <div class="flex items-baseline gap-2">
+                            <h3 class="text-2xl font-extrabold text-white" id="overview-assignments-count">--</h3>
+                        </div>
+                        <p class="text-xs text-rose-400 mt-2 font-semibold" id="overview-assignments-due">--</p>
+                    </div>
+
+                    <div onclick="switchTab('ai-hub')" class="glass-panel p-5 cursor-pointer glass-panel-hover glow-indigo">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs text-indigo-300 font-semibold uppercase">Industry Readiness</span>
+                            <span class="text-purple-400 text-base">🧠</span>
+                        </div>
+                        <div class="flex items-baseline gap-2">
+                            <h3 class="text-2xl font-extrabold text-indigo-300" id="ai-overall-score">--%</h3>
+                            <span class="text-xs font-bold" id="ai-tier-badge" style="color: #c084fc;">--</span>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-2">Placement Fit: Evaluation in Progress</p>
+                    </div>
+
+                </div>
+
+                <!-- ==================== UNIFIED DUAL ACTIVITY CALENDAR (KEY USER FEATURE) ==================== -->
+                <div class="glass-panel p-6 border-indigo-500/30 glow-indigo">
+                    
+                    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-lg">⚡</span>
+                                <h3 class="font-extrabold text-white text-lg tracking-tight">Interactive Dev & Algorithmic Activity Calendar</h3>
+                            </div>
+                            <p class="text-xs text-slate-300">Synchronized monthly calendar correlating daily LeetCode problem solving & GitHub repository commits with full date breakdown</p>
+                        </div>
+
+                        <!-- Calendar Mode Filters -->
+                        <div class="flex flex-wrap gap-1.5 p-1 rounded-xl bg-slate-900/90 border border-white/10 text-xs">
+                            <button onclick="setCalendarMode('combined')" data-mode="combined" class="cal-mode-btn px-3 py-1 rounded-lg font-bold bg-indigo-600 text-white transition-colors">
+                                Combined Matrix
+                            </button>
+                            <button onclick="setCalendarMode('split')" data-mode="split" class="cal-mode-btn px-3 py-1 rounded-lg font-semibold bg-slate-900 text-slate-300 hover:text-white transition-colors">
+                                Parallel Dual-Track
+                            </button>
+                            <button onclick="setCalendarMode('leetcode')" data-mode="leetcode" class="cal-mode-btn px-3 py-1 rounded-lg font-semibold bg-slate-900 text-slate-300 hover:text-white transition-colors">
+                                LeetCode Only
+                            </button>
+                            <button onclick="setCalendarMode('github')" data-mode="github" class="cal-mode-btn px-3 py-1 rounded-lg font-semibold bg-slate-900 text-slate-300 hover:text-white transition-colors">
+                                GitHub Only
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Summary Metrics Row -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                        <div class="p-3 rounded-xl bg-slate-900/60 border border-white/5">
+                            <span class="text-[10px] uppercase font-bold text-slate-400 block">Matrix Actions</span>
+                            <span id="cal-total-combined" class="text-xl font-extrabold text-white font-mono">--</span>
+                            <span class="text-[10px] text-slate-400 block mt-0.5">LeetCode + GitHub Combined</span>
+                        </div>
+                        <div class="p-3 rounded-xl bg-slate-900/60 border border-white/5">
+                            <span class="text-[10px] uppercase font-bold text-amber-400 block">LeetCode Solved</span>
+                            <span id="cal-total-lc" class="text-xl font-extrabold text-amber-300 font-mono">-- Solved</span>
+                            <span id="cal-sub-lc" class="text-[10px] text-amber-400/80 block mt-0.5">-- Active Days</span>
+                        </div>
+                        <div class="p-3 rounded-xl bg-slate-900/60 border border-white/5">
+                            <span class="text-[10px] uppercase font-bold text-cyan-400 block">GitHub Commits</span>
+                            <span id="cal-total-gh" class="text-xl font-extrabold text-cyan-300 font-mono">-- Commits</span>
+                            <span id="cal-sub-gh" class="text-[10px] text-cyan-400/80 block mt-0.5">-- Annual Commits</span>
+                        </div>
+                        <div class="p-3 rounded-xl bg-slate-900/60 border border-white/5">
+                            <span class="text-[10px] uppercase font-bold text-rose-400 block">Active Streak</span>
+                            <span id="cal-streak" class="text-xl font-extrabold text-rose-300 font-mono">-- Days</span>
+                            <span class="text-[10px] text-emerald-400 block mt-0.5">Continuous Developer Flow</span>
+                        </div>
+                    </div>
+
+                    <!-- Correlation Insight -->
+                    <div class="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-xs text-indigo-300 mb-4 flex items-center gap-2">
+                        <span class="text-base">💡</span>
+                        <span id="cal-correlation-insight">Calculating correlation index...</span>
+                    </div>
+
+                    <!-- Heatmap Grid Container & Day Inspector Layout -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+                        
+                        <div class="lg:col-span-2">
+                            <div class="flex items-center justify-between text-[11px] text-slate-400 mb-2">
+                                <span class="font-semibold text-slate-300 flex items-center gap-1.5">
+                                    <span>🗓️</span> Month-by-Month Calendar • Click any date to inspect details
+                                </span>
+                                <div class="flex items-center gap-1.5 text-[10px]">
+                                    <span>Rest</span>
+                                    <span class="w-3 h-3 rounded-sm bg-slate-900 border border-white/10"></span>
+                                    <span class="w-3 h-3 rounded-sm bg-emerald-950 border border-emerald-800"></span>
+                                    <span class="w-3 h-3 rounded-sm bg-emerald-800 border border-emerald-600"></span>
+                                    <span class="w-3 h-3 rounded-sm bg-gradient-to-r from-emerald-500 to-cyan-400 shadow-sm shadow-emerald-500/30"></span>
+                                    <span>Peak Flow</span>
+                                </div>
+                            </div>
+                            <div id="unified-calendar-grid" class="p-2 sm:p-3 rounded-2xl bg-slate-950/80 border border-white/5 shadow-2xl"></div>
+                        </div>
+
+                        <!-- Complete Day Details Inspector -->
+                        <div id="cal-day-inspector" class="w-full">
+                            <div class="p-4 rounded-2xl bg-slate-900/60 border border-white/5 text-center text-xs text-slate-400 py-8">
+                                Click any date cell in the calendar matrix to inspect exact LeetCode & GitHub breakdown.
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Campus Notices Ticker -->
+                <div class="glass-panel p-6 border-indigo-500/20">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping"></span>
+                            <h3 class="font-bold text-white text-base">Campus Notices & Circulars</h3>
+                        </div>
+                        <button onclick="openStudentNoticesModal()" class="text-xs text-indigo-400 hover:text-indigo-300 font-semibold">View All Circulars →</button>
+                    </div>
+                    <div id="notices-feed" class="space-y-3"></div>
+                </div>
+
+            </div>
+
+            <!-- ==================== TAB 2: LEETCODE ==================== -->
+            <div id="tab-view-leetcode" class="tab-view-content hidden space-y-6">
+                
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h2 class="text-2xl font-extrabold text-white">LeetCode Intelligence & Problem Solver</h2>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                                @<span id="tab-lc-handle-display">{{ user.leetcode_username or 'Not Connected' }}</span>
+                            </span>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-0.5">Real-time DSA problem distribution, contest rating, and submission calendar</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input id="lc-search-username" type="text" placeholder="Search LeetCode handle..." class="bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 w-48 font-mono">
+                        <button onclick="loadLeetCodeStats(document.getElementById('lc-search-username').value)" class="px-3 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold transition-colors">
+                            Lookup
+                        </button>
+                        <button onclick="openConnectAccountsModal()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 text-xs font-bold transition-colors" title="Change connected handle">
+                            Change My Handle
+                        </button>
+                    </div>
+                </div>
+
+                <!-- LeetCode Top Metrics Bar -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div class="glass-panel p-4">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-[10px] font-bold uppercase text-amber-400">Contest Rating</span>
+                            <span class="text-xs">🏆</span>
+                        </div>
+                        <div class="flex items-baseline gap-1.5">
+                            <h3 class="text-2xl font-extrabold text-white font-mono" id="lc-contest-rating">--</h3>
+                            <span class="text-xs text-amber-400 font-bold" id="lc-contest-badge">--</span>
+                        </div>
+                        <p class="text-[11px] text-slate-400 mt-1">Official Contest Rating</p>
+                    </div>
+
+                    <div class="glass-panel p-4">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-[10px] font-bold uppercase text-emerald-400">Total Solved</span>
+                            <span class="text-xs">⚡</span>
+                        </div>
+                        <div class="flex items-baseline gap-1.5">
+                            <h3 class="text-2xl font-extrabold text-white font-mono" id="tab-lc-total-solved">--</h3>
+                            <span class="text-xs text-slate-400">/ 3,315</span>
+                        </div>
+                        <p class="text-[11px] text-emerald-400 mt-1 font-bold" id="tab-lc-acceptance-rate">--% Acceptance</p>
+                    </div>
+
+                    <div class="glass-panel p-4">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-[10px] font-bold uppercase text-indigo-400">Global Ranking</span>
+                            <span class="text-xs">🌐</span>
+                        </div>
+                        <div class="flex items-baseline gap-1.5">
+                            <h3 class="text-2xl font-extrabold text-white font-mono" id="tab-lc-global-rank">#--</h3>
+                        </div>
+                        <p class="text-[11px] text-indigo-300 mt-1">Competitive Leaderboard</p>
+                    </div>
+
+                    <div class="glass-panel p-4">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-[10px] font-bold uppercase text-rose-400">Solving Streak</span>
+                            <span class="text-xs">🔥</span>
+                        </div>
+                        <div class="flex items-baseline gap-1.5">
+                            <h3 class="text-2xl font-extrabold text-white font-mono" id="tab-lc-streak">-- Days</h3>
+                        </div>
+                        <p class="text-[11px] text-rose-300 mt-1">Consistent Daily Submissions</p>
+                    </div>
+                </div>
+
+                <div class="glass-panel p-6">
+                    <div class="flex items-center justify-between mb-3">
+                        <h4 class="font-bold text-white text-sm">60-Day Problem Solving Heatmap</h4>
+                        <div class="flex items-center gap-1.5 text-[10px] text-slate-400">
+                            <span>Less</span>
+                            <span class="w-2.5 h-2.5 rounded-sm bg-slate-900 border border-white/10"></span>
+                            <span class="w-2.5 h-2.5 rounded-sm bg-emerald-900"></span>
+                            <span class="w-2.5 h-2.5 rounded-sm bg-emerald-600"></span>
+                            <span class="w-2.5 h-2.5 rounded-sm bg-emerald-400"></span>
+                            <span>More</span>
+                        </div>
+                    </div>
+                    <div id="lc-heatmap-grid" class="flex flex-wrap gap-1.5 overflow-x-auto py-2"></div>
+                </div>
+
+                <div class="glass-panel p-6">
+                    <h4 class="font-bold text-white text-sm mb-3">Acquired LeetCode Badges</h4>
+                    <div id="lc-badges-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-3"></div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="glass-panel p-6 flex flex-col items-center justify-center">
+                        <h4 class="font-bold text-white text-sm mb-4">Difficulty Distribution</h4>
+                        <div class="w-48 h-48 relative mb-6">
+                            <canvas id="lcDoughnutChart"></canvas>
+                        </div>
+                        <div class="w-full space-y-2 text-xs">
+                            <div class="flex items-center justify-between p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
+                                <span>Easy Solved</span>
+                                <span class="font-bold font-mono" id="lc-easy-count">--</span>
+                            </div>
+                            <div class="flex items-center justify-between p-2 rounded-lg bg-amber-500/10 text-amber-400">
+                                <span>Medium Solved</span>
+                                <span class="font-bold font-mono" id="lc-medium-count">--</span>
+                            </div>
+                            <div class="flex items-center justify-between p-2 rounded-lg bg-rose-500/10 text-rose-400">
+                                <span>Hard Solved</span>
+                                <span class="font-bold font-mono" id="lc-hard-count">--</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel p-6">
+                        <h4 class="font-bold text-white text-sm mb-4">Topic Mastery</h4>
+                        <div id="lc-topics-list" class="space-y-4"></div>
+                    </div>
+
+                    <div class="glass-panel p-6">
+                        <h4 class="font-bold text-white text-sm mb-4">Recent Submissions</h4>
+                        <div id="lc-recent-subs" class="space-y-3"></div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ==================== TAB 3: GITHUB ==================== -->
+            <div id="tab-view-github" class="tab-view-content hidden space-y-6">
+                
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h2 class="text-2xl font-extrabold text-white">GitHub Portfolio & Activity</h2>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                                @<span id="tab-gh-handle-display">{{ user.github_username or 'Not Connected' }}</span>
+                            </span>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-0.5">Public repositories, contribution heatmap, and language composition</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input id="gh-search-username" type="text" placeholder="Search GitHub handle..." class="bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500 w-48 font-mono">
+                        <button onclick="loadGitHubStats(document.getElementById('gh-search-username').value)" class="px-3 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold transition-colors">
+                            Lookup
+                        </button>
+                        <button onclick="openConnectAccountsModal()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/30 text-xs font-bold transition-colors" title="Change connected handle">
+                            Change My Handle
+                        </button>
+                    </div>
+                </div>
+
+                <!-- GitHub Top Metrics Bar -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div class="glass-panel p-4">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-[10px] font-bold uppercase text-cyan-400">Annual Commits</span>
+                            <span class="text-xs">🐙</span>
+                        </div>
+                        <div class="flex items-baseline gap-1.5">
+                            <h3 class="text-2xl font-extrabold text-white font-mono" id="tab-gh-total-commits">--</h3>
+                        </div>
+                        <p class="text-[11px] text-cyan-300 mt-1">Total Pushes & Commits</p>
+                    </div>
+
+                    <div class="glass-panel p-4">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-[10px] font-bold uppercase text-indigo-400">Public Repos</span>
+                            <span class="text-xs">📦</span>
+                        </div>
+                        <div class="flex items-baseline gap-1.5">
+                            <h3 class="text-2xl font-extrabold text-white font-mono" id="tab-gh-public-repos">--</h3>
+                            <span class="text-xs text-amber-400 font-bold">★ <span id="tab-gh-total-stars">--</span></span>
+                        </div>
+                        <p class="text-[11px] text-slate-400 mt-1">Open-Source Codebases</p>
+                    </div>
+
+                    <div class="glass-panel p-4">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-[10px] font-bold uppercase text-rose-400">Git Streak</span>
+                            <span class="text-xs">🔥</span>
+                        </div>
+                        <div class="flex items-baseline gap-1.5">
+                            <h3 class="text-2xl font-extrabold text-white font-mono" id="tab-gh-current-streak">-- Days</h3>
+                        </div>
+                        <p class="text-[11px] text-rose-300 mt-1">Daily Version Control Hygiene</p>
+                    </div>
+
+                    <div class="glass-panel p-4">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-[10px] font-bold uppercase text-emerald-400">Network & Social</span>
+                            <span class="text-xs">👥</span>
+                        </div>
+                        <div class="flex items-baseline gap-1.5">
+                            <h3 class="text-xl font-extrabold text-white font-mono"><span id="tab-gh-followers">--</span> Followers</h3>
+                        </div>
+                        <p class="text-[11px] text-emerald-300 mt-1"><span id="tab-gh-following">--</span> Following</p>
+                    </div>
+                </div>
+
+                <div class="glass-panel p-6">
+                    <div class="flex items-center justify-between mb-3">
+                        <h4 class="font-bold text-white text-sm">60-Day Git Contribution Matrix</h4>
+                        <div class="flex items-center gap-1.5 text-[10px] text-slate-400">
+                            <span>Less</span>
+                            <span class="w-2.5 h-2.5 rounded-sm bg-slate-900 border border-white/10"></span>
+                            <span class="w-2.5 h-2.5 rounded-sm bg-cyan-950"></span>
+                            <span class="w-2.5 h-2.5 rounded-sm bg-cyan-700"></span>
+                            <span class="w-2.5 h-2.5 rounded-sm bg-cyan-400"></span>
+                            <span>More</span>
+                        </div>
+                    </div>
+                    <div id="gh-heatmap-grid" class="flex flex-wrap gap-1.5 overflow-x-auto py-2"></div>
+                </div>
+
+                <div>
+                    <h4 class="font-bold text-white text-base mb-3">Featured Open Source Repositories</h4>
+                    <div id="gh-featured-repos" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="glass-panel p-6">
+                        <h4 class="font-bold text-white text-sm mb-4">Language Composition</h4>
+                        <div id="gh-languages-list" class="space-y-4"></div>
+                    </div>
+
+                    <div class="glass-panel p-6">
+                        <h4 class="font-bold text-white text-sm mb-4">Recent Pushes & Commits</h4>
+                        <div id="gh-recent-activity" class="space-y-3"></div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ==================== TAB 4: ASSIGNMENTS & COURSE MATERIALS ==================== -->
+            <div id="tab-view-assignments" class="tab-view-content hidden space-y-8">
+                
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-2xl font-extrabold text-white">College Coursework & Study Hub</h2>
+                        <p class="text-xs text-slate-400">Download faculty study materials, submit assignments, track grading feedback, and earn XP</p>
+                    </div>
+                </div>
+
+                <!-- Section 1: Active Coursework Assignments -->
+                <div class="space-y-4">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div>
+                            <h3 class="text-base font-bold text-white flex items-center gap-2"><span>📝 Coursework</span></h3>
+                            <p id="assignment-result-count" class="text-xs text-slate-400 mt-1" aria-live="polite"></p>
+                        </div>
+                        <div class="flex flex-col sm:flex-row gap-2">
+                            <label>
+                                <span class="sr-only">Search coursework</span>
+                                <input id="assignment-search" type="search" oninput="renderAssignmentsList()" placeholder="Search assignments" class="w-full sm:w-56 bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-400">
+                            </label>
+                            <label class="flex items-center gap-2 text-xs text-slate-400">
+                                <span class="sr-only">Filter assignments by status</span>
+                                <select id="assignment-status-filter" onchange="renderAssignmentsList()" class="bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-400">
+                                    <option value="all">All work</option>
+                                    <option value="pending">Needs submission</option>
+                                    <option value="submitted">Awaiting grade</option>
+                                    <option value="graded">Graded</option>
+                                </select>
+                            </label>
+                        </div>
+                    </div>
+                    <div id="assignments-list" class="space-y-4"></div>
+                </div>
+
+                <!-- Section 2: Campus Course Materials & Resource Hub -->
+                <div class="pt-6 border-t border-white/10 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="text-base font-bold text-white flex items-center gap-2">
+                                <span>📚 Course Materials & Faculty Resources</span>
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Free Downloads</span>
+                            </h3>
+                            <p class="text-xs text-slate-400">Lecture slides, starter code zips, problem sheets, and reference docs shared by faculty</p>
+                        </div>
+                    </div>
+                    <div id="materials-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                </div>
+
+            </div>
+
+            <!-- ==================== TAB 5: AI HUB & COPILOT ==================== -->
+            <div id="tab-view-ai-hub" class="tab-view-content hidden space-y-6">
+                
+                <div class="glass-panel p-6 border-indigo-500/30 glow-indigo">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                        <div>
+                            <span class="px-3 py-1 rounded-full text-xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
+                                Multimodal Analysis Engine
+                            </span>
+                            <h2 class="text-2xl font-extrabold text-white mt-2">Comprehensive Industry Readiness</h2>
+                            <p class="text-xs text-slate-300 max-w-2xl mt-1" id="ai-summary-text">
+                                Synthesizing data across LeetCode DSA, GitHub codebase quality, and college academic assignments.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6" id="ai-readiness-container">
+                        <div class="p-4 rounded-xl bg-slate-900/60 border border-white/5">
+                            <div class="flex justify-between text-xs font-semibold mb-1">
+                                <span class="text-slate-300">DSA & Algorithms</span>
+                                <span id="val-dsa" class="text-emerald-400 font-mono">--%</span>
+                            </div>
+                            <div class="w-full bg-slate-800 rounded-full h-2">
+                                <div id="bar-dsa" class="bg-emerald-500 h-2 rounded-full transition-all duration-700" style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <div class="p-4 rounded-xl bg-slate-900/60 border border-white/5">
+                            <div class="flex justify-between text-xs font-semibold mb-1">
+                                <span class="text-slate-300">Software Engineering (Git)</span>
+                                <span id="val-dev" class="text-cyan-400 font-mono">--%</span>
+                            </div>
+                            <div class="w-full bg-slate-800 rounded-full h-2">
+                                <div id="bar-dev" class="bg-cyan-500 h-2 rounded-full transition-all duration-700" style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <div class="p-4 rounded-xl bg-slate-900/60 border border-white/5">
+                            <div class="flex justify-between text-xs font-semibold mb-1">
+                                <span class="text-slate-300">Academic Standing</span>
+                                <span id="val-academic" class="text-purple-400 font-mono">--%</span>
+                            </div>
+                            <div class="w-full bg-slate-800 rounded-full h-2">
+                                <div id="bar-academic" class="bg-purple-500 h-2 rounded-full transition-all duration-700" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="p-5 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                            <h4 class="font-bold text-emerald-400 text-sm mb-3 flex items-center gap-2">Verified Core Strengths</h4>
+                            <ul id="ai-strengths-list" class="space-y-2"></ul>
+                        </div>
+
+                        <div class="p-5 rounded-xl bg-rose-500/10 border border-rose-500/20">
+                            <h4 class="font-bold text-rose-400 text-sm mb-3 flex items-center gap-2">Critical Skill Gaps to Address</h4>
+                            <ul id="ai-gaps-list" class="space-y-2"></ul>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="glass-panel p-6 border-indigo-500/30">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-8 h-8 rounded-lg bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center text-sm">🤖</div>
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <h3 class="font-bold text-white text-base">Nexus AI Coding Copilot</h3>
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 glow-indigo">⚡ Powered by Google Gemini</span>
+                                </div>
+                                <p class="text-[11px] text-slate-400">Ask algorithmic questions, request code reviews, or get coursework breakdowns</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1.5 flex-wrap justify-end">
+                            <button type="button" onclick="document.getElementById('ai-copilot-input').value = 'Explain Bellman-Ford algorithm with time complexity'; handleSendAIChat();" class="text-[11px] px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-indigo-300 border border-white/5 transition-colors">Explain Bellman-Ford</button>
+                            <button type="button" onclick="document.getElementById('ai-copilot-input').value = 'Recommend 3 LeetCode problems for Google SDE'; handleSendAIChat();" class="text-[11px] px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-indigo-300 border border-white/5 transition-colors">Google LeetCode</button>
+                            <button type="button" onclick="document.getElementById('ai-copilot-input').value = 'Explain Dynamic Programming optimization and memoization'; handleSendAIChat();" class="text-[11px] px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-indigo-300 border border-white/5 transition-colors">DP Memoization</button>
+                            <button type="button" onclick="document.getElementById('ai-copilot-input').value = 'What is the FAANG interview roadmap for 2026?'; handleSendAIChat();" class="text-[11px] px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-indigo-300 border border-white/5 transition-colors">FAANG Roadmap</button>
+                        </div>
+                    </div>
+
+                    <div id="ai-copilot-messages" class="h-64 overflow-y-auto p-4 rounded-xl bg-slate-950/60 border border-white/5 mb-4 space-y-3">
+                        <div class="flex justify-start">
+                            <div class="max-w-[85%] rounded-xl px-4 py-3 bg-slate-900 border border-indigo-500/30 text-slate-200 text-xs leading-relaxed">
+                                👋 Welcome {{ user.display_name }}! I'm your multimodal academic & dev AI. How can I assist your coding today?
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2">
+                        <input id="ai-copilot-input" type="text" onkeydown="if(event.key==='Enter'){event.preventDefault();handleSendAIChat();}" placeholder="Ask about an algorithm, assignment, or code optimization..." class="flex-1 bg-slate-900 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500">
+                        <button type="button" onclick="handleSendAIChat()" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md shadow-indigo-600/30 transition-all">
+                            Ask AI
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ==================== PLAY WITH AI 1: AI CODE ARENA ==================== -->
+                <div class="glass-panel p-6 border-indigo-500/40 glow-indigo">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 pb-4 border-b border-white/10">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center text-xl shadow-lg shadow-indigo-500/30">
+                                🎮
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <h3 class="font-extrabold text-white text-lg">AI Code Arena: Play & Battle with Gemini</h3>
+                                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-gradient-to-r from-pink-500/20 to-purple-500/20 text-pink-300 border border-pink-500/30">
+                                        Interactive Playground
+                                    </span>
+                                </div>
+                                <p class="text-xs text-slate-400">Stress-test your algorithms, request a savage code roast, or turbo-charge Big-O complexity</p>
+                            </div>
+                        </div>
+
+                        <!-- Language & Sample Selector -->
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="text-xs text-slate-400 font-mono">Load Sample:</span>
+                            <button type="button" onclick="setArenaSampleCode('fib')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-mono border border-white/5 transition-all">
+                                🐌 O(2^N) Fib
+                            </button>
+                            <button type="button" onclick="setArenaSampleCode('twosum')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-mono border border-white/5 transition-all">
+                                🐢 O(N²) TwoSum
+                            </button>
+                            <button type="button" onclick="setArenaSampleCode('bfs')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-mono border border-white/5 transition-all">
+                                ⚠️ Buggy Graph BFS
+                            </button>
+                            <select id="arena-lang-select" class="bg-slate-900 border border-white/10 rounded-lg px-2.5 py-1 text-xs text-white focus:outline-none focus:border-indigo-500 font-mono">
+                                <option value="python">Python</option>
+                                <option value="javascript">JavaScript</option>
+                                <option value="cpp">C++</option>
+                                <option value="java">Java</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Code Input Area -->
+                    <div class="space-y-3">
+                        <div class="relative">
+                            <textarea id="arena-code-input" rows="7" placeholder="Paste your algorithm code here or click a sample button above..." class="w-full bg-slate-950 border border-white/10 rounded-xl p-3.5 text-xs text-emerald-400 font-mono focus:outline-none focus:border-indigo-500 leading-relaxed"></textarea>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button type="button" onclick="handleRunCodeArena('roast')" class="px-4 py-2 rounded-xl bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white text-xs font-bold shadow-md shadow-rose-600/30 flex items-center gap-1.5 transition-all">
+                                <span>🔥 Roast My Code</span>
+                            </button>
+                            <button type="button" onclick="handleRunCodeArena('optimize')" class="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white text-xs font-bold shadow-md shadow-indigo-600/30 flex items-center gap-1.5 transition-all">
+                                <span>⚡ Turbo Optimize (Big-O)</span>
+                            </button>
+                            <button type="button" onclick="handleRunCodeArena('edge_cases')" class="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white text-xs font-bold shadow-md shadow-amber-600/30 flex items-center gap-1.5 transition-all">
+                                <span>💥 5 Adversarial Edge Cases</span>
+                            </button>
+                            <button type="button" onclick="handleRunCodeArena('explain')" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-white/10 flex items-center gap-1.5 transition-all">
+                                <span>💡 Explain Code</span>
+                            </button>
+                            <div id="arena-loading-indicator" class="hidden text-xs text-indigo-400 font-mono flex items-center gap-1.5 animate-pulse ml-2">
+                                <span class="animate-spin text-sm">⏳</span> Gemini thinking...
+                            </div>
+                        </div>
+
+                        <!-- Arena Output Terminal -->
+                        <div class="mt-4">
+                            <div class="flex items-center justify-between px-3 py-1.5 bg-slate-900 rounded-t-xl border border-b-0 border-white/10 text-[11px] font-mono text-slate-400">
+                                <span class="flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                    <span>AI Arena Terminal Output</span>
+                                </span>
+                                <button type="button" onclick="document.getElementById('arena-output-terminal').innerHTML = '<span class=\'text-slate-500\'>Terminal cleared. Click an action button to analyze code.</span>'" class="hover:text-white">Clear</button>
+                            </div>
+                            <div id="arena-output-terminal" class="min-h-[120px] max-h-[360px] overflow-y-auto p-4 rounded-b-xl bg-slate-950 border border-white/10 text-xs text-slate-200 font-mono leading-relaxed">
+                                <span class="text-slate-500">Choose sample code or paste your own, then click "Roast My Code" or "Turbo Optimize" to play with Gemini AI!</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ==================== PLAY WITH AI 2: FAANG MOCK INTERVIEW ==================== -->
+                <div class="glass-panel p-6 border-cyan-500/40 glow-cyan">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 pb-4 border-b border-white/10">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-600 to-blue-600 flex items-center justify-center text-xl shadow-lg shadow-cyan-500/30">
+                                💼
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <h3 class="font-extrabold text-white text-lg">FAANG Mock Interview Challenge Simulator</h3>
+                                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                        Earn +150 XP & Coins
+                                    </span>
+                                </div>
+                                <p class="text-xs text-slate-400">Simulate real technical bar-raiser rounds with Google, Meta, or Amazon principal interviewers</p>
+                            </div>
+                        </div>
+
+                        <!-- Controls -->
+                        <div class="flex flex-wrap items-center gap-2">
+                            <select id="interview-company-select" class="bg-slate-900 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500">
+                                <option value="Google">Google (L5 Senior SWE)</option>
+                                <option value="Meta">Meta (E5 Production Eng)</option>
+                                <option value="Amazon">Amazon (SDE II Bar Raiser)</option>
+                                <option value="Microsoft">Microsoft (Principal SWE)</option>
+                                <option value="Netflix">Netflix (Senior Core Eng)</option>
+                            </select>
+                            <select id="interview-topic-select" class="bg-slate-900 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500">
+                                <option value="Dynamic Programming">Dynamic Programming</option>
+                                <option value="Graphs & Shortest Path">Graphs & Trees</option>
+                                <option value="System Design & In-Memory Cache">System Design</option>
+                                <option value="Sliding Window & Two Pointers">Sliding Window</option>
+                                <option value="Concurrency & Thread Safety">Concurrency</option>
+                            </select>
+                            <button type="button" id="interview-start-btn" onclick="handleStartMockInterview()" class="px-4 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold shadow-md shadow-cyan-600/30 transition-all">
+                                🎯 Start Challenge
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Interview Content Box -->
+                    <div id="interview-problem-box" class="p-4 rounded-xl bg-slate-950/80 border border-white/10 mb-4 text-xs text-slate-300 hidden"></div>
+
+                    <!-- Solution & Candidate Answer Area -->
+                    <div id="interview-solution-area" class="space-y-3 hidden">
+                        <label class="block text-xs font-bold text-slate-300">Your Technical Approach & Solution Code:</label>
+                        <textarea id="interview-candidate-answer" rows="5" placeholder="Explain your algorithm, state time & space complexity O(...), and write your working solution..." class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 text-xs text-white font-mono focus:outline-none focus:border-cyan-500"></textarea>
+                        <div class="flex items-center justify-between">
+                            <span class="text-[11px] text-slate-400 font-mono">Passing the AI Bar Raiser awards instant Level XP & ByteCoins!</span>
+                            <button type="button" id="interview-submit-answer-btn" onclick="handleSubmitMockInterviewAnswer()" class="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white text-xs font-extrabold shadow-lg shadow-emerald-600/30 transition-all">
+                                Submit Solution to Bar Raiser →
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Feedback & Committee Verdict -->
+                    <div id="interview-feedback-box" class="mt-4 hidden"></div>
+                </div>
+
+                <div class="glass-panel p-6">
+                    <h3 class="font-bold text-white text-base mb-4 flex items-center gap-2">
+                        <span>🗓️ AI-Generated 7-Day Action Roadmap</span>
+                    </h3>
+                    <div id="ai-action-plan-list" class="space-y-3"></div>
+                </div>
+
+                <div class="glass-panel p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 class="font-bold text-white text-base">📄 AI-Generated Resume Impact Bullets</h3>
+                            <p class="text-xs text-slate-400">Quantified bullet points generated from your real LeetCode & GitHub achievements</p>
+                        </div>
+                    </div>
+                    <div id="ai-resume-bullets" class="space-y-3"></div>
+                </div>
+
+            </div>
+
+            <!-- ==================== TAB 6: SHOP & ACHIEVEMENTS ==================== -->
+            <div id="tab-view-shop" class="tab-view-content hidden space-y-8">
+                
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-2xl font-extrabold text-white flex items-center gap-2">
+                            <span>Gamification Emporium & Hall of Fame</span>
+                        </h2>
+                        <p class="text-xs text-slate-400">Unlock cyberpunk cosmetics, conquer coding milestones, and showcase prestige achievements</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-2 px-4 py-2 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 font-extrabold glow-gold">
+                            <span class="text-lg">🪙</span>
+                            <span id="shop-coin-balance" class="text-base font-mono">{{ user.coins }}</span>
+                            <span class="text-xs uppercase">ByteCoins</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs font-bold font-mono">
+                            <span>Lvl {{ user.level }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Achievements & Hall of Fame Section -->
+                <div>
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                        <div>
+                            <h3 class="font-bold text-white text-base flex items-center gap-2">
+                                <span>🏆 Campus Achievements & Hall of Fame</span>
+                            </h3>
+                            <p class="text-xs text-slate-400">Real-time milestones automatically tracked across your LeetCode, GitHub & coursework stats</p>
+                        </div>
+                        <!-- Filter Pills -->
+                        <div class="flex flex-wrap gap-1.5 text-xs">
+                            <button onclick="loadAchievements('all')" data-filter="all" class="ach-filter-btn px-3 py-1 rounded-xl font-bold bg-indigo-600 text-white shadow-md transition-all">All</button>
+                            <button onclick="loadAchievements('completed')" data-filter="completed" class="ach-filter-btn px-3 py-1 rounded-xl font-semibold bg-slate-900 text-slate-300 border border-white/10 hover:text-white transition-all">✓ Completed</button>
+                            <button onclick="loadAchievements('in-progress')" data-filter="in-progress" class="ach-filter-btn px-3 py-1 rounded-xl font-semibold bg-slate-900 text-slate-300 border border-white/10 hover:text-white transition-all">In Progress</button>
+                            <button onclick="loadAchievements('leetcode')" data-filter="leetcode" class="ach-filter-btn px-3 py-1 rounded-xl font-semibold bg-slate-900 text-slate-300 border border-white/10 hover:text-white transition-all">⚡ LeetCode</button>
+                            <button onclick="loadAchievements('github')" data-filter="github" class="ach-filter-btn px-3 py-1 rounded-xl font-semibold bg-slate-900 text-slate-300 border border-white/10 hover:text-white transition-all">🐙 GitHub</button>
+                            <button onclick="loadAchievements('streak')" data-filter="streak" class="ach-filter-btn px-3 py-1 rounded-xl font-semibold bg-slate-900 text-slate-300 border border-white/10 hover:text-white transition-all">🔥 Streak</button>
+                        </div>
+                    </div>
+                    <div id="achievements-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div>
+                </div>
+
+                <!-- Virtual Cosmetic Wardrobe Section -->
+                <div class="pt-6 border-t border-white/10">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+                        <div>
+                            <h3 class="font-bold text-white text-base flex items-center gap-2">
+                                <span>🛍️ Virtual Cosmetics Catalogue</span>
+                            </h3>
+                            <p class="text-xs text-slate-400">Unlock dynamic cyberpunk avatars, glowing banners, prestige titles, and UI color palettes</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="loadShopItems('all')" data-filter="all" class="shop-filter-btn px-4 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-md transition-all">All Items</button>
+                            <button onclick="loadShopItems('avatar')" data-filter="avatar" class="shop-filter-btn px-4 py-1.5 rounded-xl text-xs font-bold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-white/10 transition-all">🤖 Cyber Avatars</button>
+                            <button onclick="loadShopItems('banner')" data-filter="banner" class="shop-filter-btn px-4 py-1.5 rounded-xl text-xs font-bold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-white/10 transition-all">🎨 Profile Banners</button>
+                            <button onclick="loadShopItems('title')" data-filter="title" class="shop-filter-btn px-4 py-1.5 rounded-xl text-xs font-bold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-white/10 transition-all">🎖️ Exclusive Titles</button>
+                            <button onclick="loadShopItems('theme')" data-filter="theme" class="shop-filter-btn px-4 py-1.5 rounded-xl text-xs font-bold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-white/10 transition-all">⚡ UI Themes</button>
+                        </div>
+                    </div>
+                    <div id="shop-items-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+                </div>
+
+            </div>
+
+            <!-- ==================== TAB 7: LEADERBOARD ==================== -->
+            <div id="tab-view-leaderboard" class="tab-view-content hidden space-y-6">
+                <div>
+                    <h2 class="text-2xl font-extrabold text-white">Campus Hall of Fame</h2>
+                    <p class="text-xs text-slate-400">Student rankings based on verified XP, LeetCode solutions, GitHub contributions, and GPA</p>
+                </div>
+
+                <div id="leaderboard-list" class="space-y-4"></div>
+            </div>
+
+                    </main>
+
+    </div>
+
+    <!-- Pitch Presentation Modal -->
+    <div id="pitch-tour-modal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-xl hidden flex items-center justify-center p-4">
+        <div class="glass-panel max-w-2xl w-full p-8 relative border-cyan-500/40 glow-cyan modal-content-animated">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-2.5">
+                    <span id="pitch-slide-icon" class="text-3xl">🚀</span>
+                    <div>
+                        <span id="pitch-slide-counter" class="text-xs uppercase font-extrabold text-cyan-400">Slide 1 of 4</span>
+                        <h3 id="pitch-slide-title" class="text-xl font-extrabold text-white">Pitch Deck</h3>
+                    </div>
+                </div>
+                <button onclick="closePitchTour()" class="text-slate-400 hover:text-white">✕</button>
+            </div>
+
+            <p id="pitch-slide-subtitle" class="text-sm font-semibold text-slate-300 mb-6"></p>
+            <ul id="pitch-slide-bullets" class="space-y-3 mb-8"></ul>
+
+            <div class="flex items-center justify-between pt-4 border-t border-white/10">
+                <button onclick="prevPitchSlide()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold">
+                    ← Previous
+                </button>
+                <div class="flex items-center gap-2">
+                    <button onclick="closePitchTour()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold">
+                        Exit Tour
+                    </button>
+                    <button onclick="nextPitchSlide()" class="px-5 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 text-xs font-extrabold shadow-lg shadow-cyan-500/20">
+                        Next Slide →
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assignment Submit Modal -->
+    <div id="assignment-submit-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+        <div class="glass-panel max-w-lg w-full p-6 relative border-indigo-500/40 modal-content-animated">
+            <h3 class="text-lg font-bold text-white mb-1" id="submit-modal-title">Submit Assignment</h3>
+            <p class="text-xs text-slate-400 mb-4">Enter your repository link, notes, and attach your solution files</p>
+
+            <form id="assignment-submission-form" class="space-y-4 text-xs">
+                <input type="hidden" id="submit-modal-assignment-id">
+
+                <div>
+                    <label class="block text-slate-300 font-semibold mb-1">GitHub / Code Solution URL</label>
+                    <input type="url" id="submit-modal-link" placeholder="https://github.com/username/assignment-repo" class="w-full bg-slate-900 border border-white/10 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500">
+                </div>
+
+                <div>
+                    <label class="block text-slate-300 font-semibold mb-1">Upload Solution Archive / Code File</label>
+                    <input type="file" id="submit-modal-file" class="w-full bg-slate-900 border border-white/10 rounded-xl p-2 text-white text-xs file:mr-3 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500 cursor-pointer">
+                    <div id="submit-modal-existing-file" class="mt-1.5 text-[11px] text-slate-300 hidden p-2 rounded-lg bg-slate-950/80 border border-white/5"></div>
+                </div>
+
+                <div>
+                    <label class="block text-slate-300 font-semibold mb-1">Solution Notes & Approach</label>
+                    <textarea id="submit-modal-notes" rows="3" placeholder="Briefly describe your approach, time complexity, and how to execute..." class="w-full bg-slate-900 border border-white/10 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500"></textarea>
+                </div>
+
+                <div id="submit-test-runner" class="hidden"></div>
+
+                <div class="flex items-center justify-end gap-3 pt-2">
+                    <button type="button" onclick="closeSubmitModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold shadow-md shadow-indigo-600/30">
+                        Run Tests & Submit (+120 XP)
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- AI Guidance Modal -->
+    <div id="ai-guidance-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+        <div class="glass-panel max-w-2xl w-full p-6 relative max-h-[85vh] overflow-y-auto border-indigo-500/40 modal-content-animated">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-base font-bold text-white" id="ai-guidance-title">AI Guidance</h3>
+                <button onclick="closeAIGuidanceModal()" class="text-slate-400 hover:text-white">✕</button>
+            </div>
+            <div id="ai-guidance-content"></div>
+        </div>
+    </div>
+
+    <!-- Faculty Grading Studio Modal -->
+    <div id="grading-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+        <div class="glass-panel max-w-lg w-full p-6 relative border-indigo-500/40">
+            <h3 class="text-base font-bold text-white mb-1">Faculty Grading Studio</h3>
+            <p class="text-xs text-slate-400 mb-4"><span id="grade-student-name"></span> - <span id="grade-assignment-title"></span></p>
+
+            <div class="p-3 rounded-xl bg-slate-900/80 border border-white/5 mb-4 text-xs space-y-2">
+                <div>
+                    <span class="text-slate-400 font-semibold block text-[10px] uppercase">Submitted Solution Link:</span>
+                    <a id="grade-preview-link" href="#" target="_blank" class="text-cyan-400 hover:underline font-mono truncate block"></a>
+                </div>
+                <div id="grade-preview-file-container" class="hidden"></div>
+                <div>
+                    <span class="text-slate-400 font-semibold block text-[10px] uppercase">Student Notes:</span>
+                    <p id="grade-preview-notes" class="text-slate-300"></p>
+                </div>
+            </div>
+
+            <form id="grading-submission-form" class="space-y-4 text-xs">
+                <input type="hidden" id="grade-sub-id">
+
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="block text-slate-300 font-semibold">Awarded Score (Max: <span id="grade-max-points">100 pts</span>)</label>
+                        <button type="button" id="ai-evaluate-btn" onclick="handleAIEvaluateSubmission()" class="px-2.5 py-1 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/40 text-[11px] font-bold flex items-center gap-1.5 transition-all">
+                            <span>🤖 AI Auto-Evaluate & Grade</span>
+                        </button>
+                    </div>
+                    <input type="number" id="grade-score-input" required min="0" step="0.5" class="w-full bg-slate-900 border border-white/10 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500">
+                </div>
+
+                <div>
+                    <label class="block text-slate-300 font-semibold mb-1">Constructive Feedback & Rubric Notes</label>
+                    <textarea id="grade-feedback-input" rows="4" placeholder="Provide feedback on algorithmic structure, edge cases, and documentation..." class="w-full bg-slate-900 border border-white/10 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500"></textarea>
+                </div>
+
+                <div class="flex items-center justify-end gap-3 pt-2">
+                    <button type="button" onclick="closeGradingModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold shadow-md shadow-indigo-600/30">
+                        Record Grade & Notify Student
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Connect LeetCode & GitHub Accounts Modal -->
+    <div id="connect-accounts-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+        <div class="glass-panel max-w-lg w-full p-6 relative border-indigo-500/40 glow-indigo modal-content-animated">
+            <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/40 flex items-center justify-center text-base">
+                        🔗
+                    </div>
+                    <h3 class="text-base font-extrabold text-white">Connect Developer Accounts</h3>
+                </div>
+                <button onclick="closeConnectAccountsModal()" class="text-slate-400 hover:text-white text-lg">✕</button>
+            </div>
+            
+            <p class="text-xs text-slate-300 mb-5">
+                Link your personal handles to automatically sync your problem-solving velocity, repository commits, and AI placement readiness. Connecting awards <span class="text-amber-400 font-bold">+100 XP</span> & <span class="text-yellow-400 font-bold">+50 ByteCoins</span>!
+            </p>
+
+            <form id="connect-accounts-form" onsubmit="handleConnectAccountsSubmit(event)" class="space-y-4 text-xs">
+                
+                <!-- LeetCode Handle Input & Live Verify -->
+                <div class="p-3.5 rounded-xl bg-slate-900/80 border border-amber-500/30">
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="font-bold text-amber-400 flex items-center gap-1.5">
+                            <span>⚡ LeetCode Username</span>
+                        </label>
+                        <span id="lc-verify-badge" class="text-[10px] text-slate-400 font-mono">Not verified</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <div class="relative flex-1">
+                            <span class="absolute left-3 top-2.5 text-slate-500 font-mono">@</span>
+                            <input type="text" id="connect-lc-input" value="{{ user.leetcode_username }}" placeholder="e.g. neal_wu or your_username" class="w-full bg-slate-950 border border-white/10 rounded-xl pl-7 pr-3 py-2 text-white focus:outline-none focus:border-amber-500 font-mono">
+                        </div>
+                        <button type="button" onclick="verifyHandle('leetcode')" class="px-3 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 font-bold shrink-0 transition-colors">
+                            Verify Handle
+                        </button>
+                    </div>
+                    <div id="lc-verify-details" class="mt-2 text-[11px] text-slate-300 hidden"></div>
+                </div>
+
+                <!-- GitHub Handle Input & Live Verify -->
+                <div class="p-3.5 rounded-xl bg-slate-900/80 border border-cyan-500/30">
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="font-bold text-cyan-400 flex items-center gap-1.5">
+                            <span>🐙 GitHub Username</span>
+                        </label>
+                        <span id="gh-verify-badge" class="text-[10px] text-slate-400 font-mono">Not verified</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <div class="relative flex-1">
+                            <span class="absolute left-3 top-2.5 text-slate-500 font-mono">@</span>
+                            <input type="text" id="connect-gh-input" value="{{ user.github_username }}" placeholder="e.g. torvalds or your_username" class="w-full bg-slate-950 border border-white/10 rounded-xl pl-7 pr-3 py-2 text-white focus:outline-none focus:border-cyan-500 font-mono">
+                        </div>
+                        <button type="button" onclick="verifyHandle('github')" class="px-3 py-2 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 font-bold shrink-0 transition-colors">
+                            Verify Handle
+                        </button>
+                    </div>
+                    <div id="gh-verify-details" class="mt-2 text-[11px] text-slate-300 hidden"></div>
+                </div>
+
+                <!-- Popular Handles Quick Selector for Testing -->
+                <div class="p-3 rounded-xl bg-slate-950/60 border border-white/5">
+                    <span class="text-[10px] uppercase font-bold text-slate-400 block mb-1.5">Quick Test Profiles (1-Click Fill):</span>
+                    <div class="flex flex-wrap gap-1.5">
+                        <button type="button" onclick="fillQuickHandles('alex_codes', 'alex-rivera')" class="px-2 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-[10px] text-slate-300 border border-white/10">
+                            Alex Rivera (Demo)
+                        </button>
+                        <button type="button" onclick="fillQuickHandles('neal_wu', 'torvalds')" class="px-2 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-[10px] text-amber-300 border border-white/10">
+                            Neal Wu & Linus Torvalds
+                        </button>
+                        <button type="button" onclick="fillQuickHandles('tourist', 'gaearon')" class="px-2 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-[10px] text-cyan-300 border border-white/10">
+                            Tourist & Dan Abramov
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Form actions -->
+                <div class="flex items-center justify-end gap-3 pt-2">
+                    <button type="button" onclick="closeConnectAccountsModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold">
+                        Cancel
+                    </button>
+                    <button type="submit" id="save-connect-btn" class="px-5 py-2 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-cyan-500 hover:from-indigo-500 hover:to-cyan-400 text-white font-extrabold shadow-lg shadow-indigo-600/30 flex items-center gap-1.5 transition-all">
+                        <span>Save & Sync Accounts (+100 XP)</span>
+                        <span>→</span>
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+
+    <!-- Profile Personalization Modal -->
+    <div id="profile-edit-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+        <div class="glass-panel max-w-lg w-full p-6 relative border-indigo-500/40 modal-content-animated">
+            <h3 class="text-base font-bold text-white mb-1">Customize Student Profile</h3>
+            <p class="text-xs text-slate-400 mb-4">Set career targets, LeetCode/GitHub handles, and personal bio</p>
+
+            <form id="profile-edit-form" class="space-y-4 text-xs">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-slate-300 font-semibold mb-1">Target Dream Role</label>
+                        <input type="text" id="prof-target-role" value="{{ user.target_role }}" class="w-full bg-slate-900 border border-white/10 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-slate-300 font-semibold mb-1">Target Dream Company</label>
+                        <input type="text" id="prof-target-company" value="{{ user.target_company }}" class="w-full bg-slate-900 border border-white/10 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-slate-300 font-semibold mb-1">LeetCode Username</label>
+                        <input type="text" id="prof-lc-user" value="{{ user.leetcode_username }}" class="w-full bg-slate-900 border border-white/10 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-slate-300 font-semibold mb-1">GitHub Username</label>
+                        <input type="text" id="prof-gh-user" value="{{ user.github_username }}" class="w-full bg-slate-900 border border-white/10 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-slate-300 font-semibold mb-1">Department</label>
+                        <input type="text" id="prof-department" value="{{ user.department }}" class="w-full bg-slate-900 border border-white/10 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-slate-300 font-semibold mb-1">Class Section</label>
+                        <select id="prof-section" class="w-full bg-slate-900 border border-white/10 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500">
+                            <option value="Section A" {% if user.section == 'Section A' %}selected{% endif %}>Section A</option>
+                            <option value="Section B" {% if user.section == 'Section B' %}selected{% endif %}>Section B</option>
+                            <option value="Section C" {% if user.section == 'Section C' %}selected{% endif %}>Section C</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-slate-300 font-semibold mb-1">Current Semester</label>
+                        <input type="number" id="prof-semester" value="{{ user.semester }}" min="1" max="8" class="w-full bg-slate-900 border border-white/10 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-slate-300 font-semibold mb-1">Bio</label>
+                    <textarea id="prof-bio" rows="2" class="w-full bg-slate-900 border border-white/10 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500">{{ user.bio }}</textarea>
+                </div>
+
+                <div class="flex items-center justify-end gap-3 pt-2">
+                    <button type="button" onclick="closeProfileModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold shadow-md shadow-indigo-600/30">
+                        Save Personalization
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Student Campus Circulars Reader Modal -->
+    <div id="student-notices-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+        <div class="glass-panel max-w-2xl w-full max-h-[85vh] flex flex-col p-6 relative border-indigo-500/40 shadow-2xl modal-content-animated">
+            <div class="flex items-center justify-between pb-3 border-b border-white/10 mb-4">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl">📢</span>
+                    <h3 class="text-base font-bold text-white">Campus Circulars & Official Notices</h3>
+                </div>
+                <button onclick="closeStudentNoticesModal()" class="text-slate-400 hover:text-white text-lg">✕</button>
+            </div>
+            <div id="student-notices-body" class="overflow-y-auto space-y-4 pr-1"></div>
+        </div>
+    </div>
+
+    <!-- Firebase Auth Modal -->
+    <div id="firebase-settings-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+        <div class="glass-panel max-w-lg w-full p-6 relative border-indigo-500/40 modal-content-animated">
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl">🔥</span>
+                    <h3 class="text-base font-bold text-white">Firebase Authentication</h3>
+                </div>
+                <button onclick="closeFirebaseModal()" class="text-slate-400 hover:text-white">✕</button>
+            </div>
+            
+            <p class="text-xs text-slate-300 mb-4">
+                Authenticate with Google or email/password powered by Firebase Auth, or customize your Firebase API credentials.
+            </p>
+
+            <button onclick="handleFirebaseGoogleLogin()" class="w-full py-2.5 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md mb-4">
+                <svg class="w-4 h-4" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
+                Sign In with Google
+            </button>
+
+            <div class="border-t border-white/10 pt-4 space-y-3 text-xs">
+                <div>
+                    <label class="block text-slate-300 font-semibold mb-1">Email Address</label>
+                    <input type="email" id="fb-email" placeholder="student@college.edu" class="w-full bg-slate-900 border border-white/10 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-slate-300 font-semibold mb-1">Password</label>
+                    <input type="password" id="fb-pass" placeholder="••••••••" class="w-full bg-slate-900 border border-white/10 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500">
+                </div>
+                <div class="flex gap-2">
+                    <button type="button" onclick="handleFirebaseEmailLogin(document.getElementById('fb-email').value, document.getElementById('fb-pass').value)" class="flex-1 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold">
+                        Email Sign In
+                    </button>
+                    <button type="button" onclick="handleFirebaseEmailSignUp(document.getElementById('fb-email').value, document.getElementById('fb-pass').value, 'New Student')" class="flex-1 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold">
+                        Sign Up
+                    </button>
+                </div>
+            </div>
+
+            <div class="mt-4 pt-3 border-t border-white/10 text-[11px] text-slate-400 font-mono">
+                <p class="font-bold text-slate-300 mb-1">Firebase Configuration:</p>
+                <p>Project ID: <span class="text-indigo-400">{{ firebase_config.projectId }}</span></p>
+                <p>Auth Domain: <span class="text-indigo-400">{{ firebase_config.authDomain }}</span></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications Container -->
+    <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Global Floating Heatmap Tooltip (Viewport Portal - Never clipped by parent overflow) -->
+    <div id="nexus-heatmap-tooltip" class="fixed pointer-events-none z-[99999] opacity-0 transition-opacity duration-150 px-3 py-2 bg-slate-950/95 backdrop-blur-md border border-white/20 text-xs text-white rounded-xl shadow-2xl max-w-xs whitespace-nowrap"></div>
+
+    <!-- JavaScript Modules -->
+    <script src="/static/js/firebase-config.js"></script>
+    <script src="/static/js/gamification.js"></script>
+    <script src="/static/js/student.js?v=2.4"></script>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexusEdu AI - Unified Student & Campus Intelligence Platform</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236366f1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polygon points='12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2'></polygon></svg>">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            950: '#070a13'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="bg-[#050811] text-slate-100 min-h-screen flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
+
+    <!-- ==================== LIVELY APP LOADING SCREEN ==================== -->
+    <div id="app-loading-screen">
+        <div class="loader-glow-orb"></div>
+        <div class="relative flex flex-col items-center">
+            <div class="relative w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-cyan-400 p-0.5 shadow-2xl shadow-indigo-500/40 mb-4">
+                <div class="loader-spin-ring"></div>
+                <div class="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
+                    <svg class="w-8 h-8 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                </div>
+            </div>
+            <h2 class="text-xl font-extrabold tracking-tight bg-gradient-to-r from-white via-indigo-100 to-indigo-400 bg-clip-text text-transparent">
+                NexusEdu AI
+            </h2>
+            <p class="text-xs text-slate-400 mt-1.5 font-medium tracking-wide">Unified Student & Campus Intelligence Platform</p>
+            
+            <div class="loader-progress-track">
+                <div class="loader-progress-bar"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.FIREBASE_CONFIG = {{ firebase_config | tojson | safe }};
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                const loader = document.getElementById('app-loading-screen');
+                if (loader) {
+                    loader.classList.add('fade-out');
+                    setTimeout(() => loader.remove(), 450);
+                }
+            }, 350);
+        });
+        setTimeout(() => {
+            const loader = document.getElementById('app-loading-screen');
+            if (loader) {
+                loader.classList.add('fade-out');
+                setTimeout(() => loader.remove(), 450);
+            }
+        }, 1200);
+    </script>
+
+    <!-- Background glow spheres -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none -z-10">
+        <div class="absolute -top-40 -left-40 w-96 h-96 bg-indigo-600/20 rounded-full blur-[128px]"></div>
+        <div class="absolute top-1/3 -right-40 w-96 h-96 bg-cyan-600/15 rounded-full blur-[140px]"></div>
+        <div class="absolute -bottom-40 left-1/3 w-96 h-96 bg-purple-600/15 rounded-full blur-[140px]"></div>
+    </div>
+
+    <!-- Navigation Header -->
+    <header class="sticky top-0 z-40 bg-slate-950/80 backdrop-blur-xl border-b border-white/10 px-6 lg:px-12 py-4">
+        <div class="max-w-7xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-cyan-400 p-0.5 shadow-lg shadow-indigo-500/30">
+                    <div class="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
+                        <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                    </div>
+                </div>
+                <div>
+                    <span class="font-extrabold text-xl tracking-tight bg-gradient-to-r from-white via-indigo-100 to-indigo-400 bg-clip-text text-transparent">NexusEdu AI</span>
+                    <span class="block text-[10px] text-slate-400 uppercase tracking-widest font-mono">Academic & Dev Intelligence OS</span>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <a href="#portals" class="text-xs font-semibold text-slate-300 hover:text-white transition-colors hidden md:block">Explore Portals</a>
+                <a href="#features" class="text-xs font-semibold text-slate-300 hover:text-white transition-colors hidden md:block">Capabilities</a>
+                
+                {% if user %}
+                    <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900 border border-white/10 text-xs">
+                        <img src="{{ user.avatar_url }}" class="w-5 h-5 rounded-full">
+                        <span class="text-slate-200 font-semibold truncate max-w-[120px]">{{ user.display_name }}</span>
+                    </div>
+                    <a href="/logout" class="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-rose-950/40 text-slate-300 hover:text-rose-300 text-xs font-semibold border border-white/10 hover:border-rose-500/30 transition-all">
+                        Sign Out
+                    </a>
+                    <a href="{{ '/college' if user.role == 'faculty' else '/student' }}" class="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-extrabold shadow-lg shadow-indigo-600/30 transition-all">
+                        Go to Dashboard →
+                    </a>
+                {% else %}
+                    <a href="/login" class="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 hover:text-white text-xs font-bold border border-white/10 transition-all">
+                        Sign In
+                    </a>
+                    <a href="/signup" class="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-extrabold shadow-lg shadow-indigo-600/30 transition-all">
+                        Create Account
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <main class="flex-1 max-w-7xl mx-auto w-full px-6 lg:px-12 py-12 md:py-20 flex flex-col items-center text-center">
+        
+        <!-- Live Tagline Badge -->
+        <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs font-bold mb-6 glow-indigo">
+            <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+            <span>NEXT-GEN COMPUTER SCIENCE & RECRUITMENT INTELLIGENCE</span>
+        </div>
+
+        <h1 class="text-4xl md:text-6xl lg:text-7xl font-extrabold tracking-tight text-white max-w-4xl leading-tight md:leading-none mb-6">
+            Track <span class="bg-gradient-to-r from-amber-400 via-orange-400 to-amber-200 bg-clip-text text-transparent">LeetCode</span>, <span class="bg-gradient-to-r from-cyan-400 via-teal-300 to-blue-400 bg-clip-text text-transparent">GitHub</span> & <span class="bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">Coursework</span> in One AI Dashboard.
+        </h1>
+
+        <p class="text-base md:text-xl text-slate-300 max-w-3xl leading-relaxed mb-12">
+            The unified developer intelligence platform bridging competitive programming algorithms, open-source software engineering, and university academics with <strong>real-time AI diagnostic analysis</strong> and <strong>Web3-style gamification</strong>.
+        </p>
+
+        <!-- SEPARATE DASHBOARD PORTALS SECTION (DIRECT ANSWER TO USER) -->
+        <div id="portals" class="w-full pt-4 mb-20">
+            <div class="text-center mb-8">
+                <span class="text-xs uppercase font-extrabold tracking-widest text-cyan-400 block mb-1">CHOOSE YOUR PORTAL</span>
+                <h2 class="text-2xl md:text-3xl font-extrabold text-white">Select Your Dedicated Dashboard</h2>
+                <p class="text-xs text-slate-400 mt-1">Enter either as a Student or as College Management / Faculty</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 text-left max-w-5xl mx-auto">
+                
+                <!-- PORTAL 1: STUDENT DASHBOARD -->
+                <div class="glass-panel p-8 rounded-3xl relative overflow-hidden border-indigo-500/40 glow-indigo group hover:scale-[1.01] transition-all flex flex-col justify-between">
+                    <div class="absolute -right-10 -bottom-10 w-44 h-44 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none"></div>
+
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-14 h-14 rounded-2xl bg-indigo-600/20 border border-indigo-500/40 flex items-center justify-center text-3xl">
+                                🎓
+                            </div>
+                            <span class="px-3 py-1 rounded-full text-xs font-extrabold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                                Student Portal
+                            </span>
+                        </div>
+
+                        <h3 class="text-2xl font-extrabold text-white mb-2">Student Intelligence Dashboard</h3>
+                        <p class="text-xs text-slate-300 leading-relaxed mb-6">
+                            Unified analytics for competitive programming and software engineering. Track problem-solving velocity, automated coursework submissions, and earn ByteCoins to personalize your avatar and profile.
+                        </p>
+
+                        <div class="space-y-2.5 text-xs text-slate-300 mb-8 font-medium">
+                            <div class="flex items-center gap-2">
+                                <span class="text-emerald-400">✓</span>
+                                <span><strong>Unified Dual Heatmap</strong> (Combined LeetCode + GitHub 60-day calendar)</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-cyan-400">✓</span>
+                                <span><strong>Interactive AI Coding Copilot</strong> & Big-O complexity analyzer</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-amber-400">✓</span>
+                                <span><strong>Gamification Shop</strong> (Avatars, Animated Banners, Titles, Mystery Loot)</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-purple-400">✓</span>
+                                <span><strong>Coursework Tracker</strong> with simulated test suites & XP rewards</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3 pt-4 border-t border-white/10">
+                        {% if user and user.role == 'faculty' %}
+                        <a href="/college" class="w-full py-3.5 px-6 rounded-2xl bg-slate-900 border border-indigo-500/30 text-indigo-300 hover:text-white font-extrabold text-xs shadow-xl flex items-center justify-center gap-2 transition-all" title="Student portal is reserved for students">
+                            <span>🔒 Student Portal (Restricted to Students)</span>
+                        </a>
+                        {% else %}
+                        <a href="/student" class="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-extrabold text-sm shadow-xl shadow-indigo-600/30 flex items-center justify-center gap-2 transition-all">
+                            <span>Launch Student Dashboard</span>
+                            <span>→</span>
+                        </a>
+                        {% endif %}
+                        <div class="grid grid-cols-2 gap-2">
+                            <a href="/login" class="py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-semibold border border-white/10 text-center transition-colors">
+                                Student Sign In
+                            </a>
+                            <a href="/signup" class="py-2.5 px-3 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 hover:text-white text-xs font-semibold border border-indigo-500/30 text-center transition-colors">
+                                Register Account
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PORTAL 2: COLLEGE MANAGEMENT DASHBOARD -->
+                <div class="glass-panel p-8 rounded-3xl relative overflow-hidden border-purple-500/40 glow-primary group hover:scale-[1.01] transition-all flex flex-col justify-between">
+                    <div class="absolute -right-10 -bottom-10 w-44 h-44 bg-purple-600/15 rounded-full blur-3xl pointer-events-none"></div>
+
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-14 h-14 rounded-2xl bg-purple-600/20 border border-purple-500/40 flex items-center justify-center text-3xl">
+                                🏫
+                            </div>
+                            <span class="px-3 py-1 rounded-full text-xs font-extrabold bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                                Administration Portal
+                            </span>
+                        </div>
+
+                        <h3 class="text-2xl font-extrabold text-white mb-2">College Faculty & Admin Hub</h3>
+                        <p class="text-xs text-slate-300 leading-relaxed mb-6">
+                            Institutional management suite for professors and academic deans. Publish campus circulars, design coursework, monitor at-risk student cohorts, and export accredited NBA/NAAC audit reports.
+                        </p>
+
+                        <div class="space-y-2.5 text-xs text-slate-300 mb-8 font-medium">
+                            <div class="flex items-center gap-2">
+                                <span class="text-rose-400">✓</span>
+                                <span><strong>Cohort Risk Radar</strong> with 1-click academic intervention nudges</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-purple-400">✓</span>
+                                <span><strong>Interactive Grading Studio</strong> with code preview & rubric scoring</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-amber-400">✓</span>
+                                <span><strong>Campus Notice Broadcaster</strong> (Urgent, Placement, Hackathons)</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-emerald-400">✓</span>
+                                <span><strong>1-Click Accredited CSV Export</strong> for university accreditation</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3 pt-4 border-t border-white/10">
+                        {% if user and user.role == 'student' %}
+                        <a href="/college" class="w-full py-3.5 px-6 rounded-2xl bg-slate-900 border border-purple-500/30 text-purple-300 hover:text-white font-extrabold text-xs shadow-xl flex items-center justify-center gap-2 transition-all" title="Restricted to Faculty accounts">
+                            <span>🔒 Faculty Portal (Restricted to Faculty)</span>
+                        </a>
+                        {% else %}
+                        <a href="/college" class="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-sm shadow-xl shadow-purple-600/30 flex items-center justify-center gap-2 transition-all">
+                            <span>Launch College Management Portal</span>
+                            <span>→</span>
+                        </a>
+                        {% endif %}
+                        <div class="grid grid-cols-2 gap-2">
+                            <a href="/login" class="py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-semibold border border-white/10 text-center transition-colors">
+                                Faculty Sign In
+                            </a>
+                            <a href="/signup" class="py-2.5 px-3 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 hover:text-white text-xs font-semibold border border-purple-500/30 text-center transition-colors">
+                                Register Faculty
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Key Feature Highlights Grid -->
+        <div id="features" class="w-full max-w-6xl mx-auto pt-6 mb-16 text-left">
+            <div class="text-center mb-10">
+                <span class="text-xs uppercase font-extrabold tracking-widest text-indigo-400 block mb-1">CORE CAPABILITIES</span>
+                <h3 class="text-2xl md:text-3xl font-extrabold text-white">Engineered For Students & Educational Institutions</h3>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                
+                <div class="glass-panel p-6 border-white/5 hover:border-indigo-500/30 transition-all">
+                    <div class="text-3xl mb-3">🗓️</div>
+                    <h4 class="font-bold text-white text-base mb-2">Unified Dual Activity Calendar</h4>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        Eliminates fragmented tracking. Combines GitHub commits and LeetCode problem solving on a synchronized 60-day visual matrix with day-by-day velocity metrics.
+                    </p>
+                </div>
+
+                <div class="glass-panel p-6 border-white/5 hover:border-cyan-500/30 transition-all">
+                    <div class="text-3xl mb-3">🧠</div>
+                    <h4 class="font-bold text-white text-base mb-2">Multimodal AI Diagnostic Engine</h4>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        Calculates an Industry Placement Readiness Score (0-100%), identifies critical algorithmic gaps, generates 7-day roadmaps, and drafts STAR-method resume bullets.
+                    </p>
+                </div>
+
+                <div class="glass-panel p-6 border-white/5 hover:border-amber-500/30 transition-all">
+                    <div class="text-3xl mb-3">🛍️</div>
+                    <h4 class="font-bold text-white text-base mb-2">Gamification & Retention Economy</h4>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        Turns academic compliance and daily coding into ByteCoins, XP level progressions, daily mystery chest drops, and a virtual shop for banners, avatars, and titles.
+                    </p>
+                </div>
+
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-white/10 py-8 px-6 text-center text-xs text-slate-500">
+        <p>NexusEdu AI Platform • Built with Python Flask, SQLite, HTML5, CSS3, JavaScript & Firebase Auth.</p>
+    </footer>
+
+    <!-- Firebase Auth Modal -->
+    <div id="firebase-settings-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+        <div class="glass-panel max-w-lg w-full p-6 relative border-indigo-500/40 text-left">
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl">🔥</span>
+                    <h3 class="text-base font-bold text-white">Firebase Authentication</h3>
+                </div>
+                <button onclick="closeFirebaseModal()" class="text-slate-400 hover:text-white">✕</button>
+            </div>
+            
+            <p class="text-xs text-slate-300 mb-4">
+                Authenticate with Google or email/password powered by Firebase Auth, or customize your Firebase API credentials.
+            </p>
+
+            <button onclick="handleFirebaseGoogleLogin()" class="w-full py-2.5 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md mb-4">
+                <svg class="w-4 h-4" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
+                Sign In with Google
+            </button>
+
+            <div class="border-t border-white/10 pt-4 space-y-3 text-xs">
+                <div>
+                    <label class="block text-slate-300 font-semibold mb-1">Email Address</label>
+                    <input type="email" id="fb-email" placeholder="student@college.edu" class="w-full bg-slate-900 border border-white/10 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-slate-300 font-semibold mb-1">Password</label>
+                    <input type="password" id="fb-pass" placeholder="••••••••" class="w-full bg-slate-900 border border-white/10 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500">
+                </div>
+                <div class="flex gap-2">
+                    <button type="button" onclick="handleFirebaseEmailLogin(document.getElementById('fb-email').value, document.getElementById('fb-pass').value)" class="flex-1 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold">
+                        Email Sign In
+                    </button>
+                    <button type="button" onclick="handleFirebaseEmailSignUp(document.getElementById('fb-email').value, document.getElementById('fb-pass').value, 'New Student')" class="flex-1 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold">
+                        Sign Up
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications Container -->
+    <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <script src="/static/js/firebase-config.js"></script>
+    <script>
+        function openFirebaseModal() {
+            document.getElementById('firebase-settings-modal').classList.remove('hidden');
+        }
+        function closeFirebaseModal() {
+            document.getElementById('firebase-settings-modal').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>

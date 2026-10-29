@@ -1,0 +1,28 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment and sensitive secrets
+.secret_key
+.env.local
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+
+# Scratch & temporary test scripts
+scratch/
+*.log
+
+# Editor directories
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS generated files
+.DS_Store
+Thumbs.db

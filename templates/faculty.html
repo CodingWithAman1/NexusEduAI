@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Faculty & College Management Portal - NexusEdu AI</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b5cf6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polygon points='12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2'></polygon></svg>">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        faculty: {
+                            500: '#8b5cf6',
+                            600: '#7c3aed',
+                            700: '#6d28d9',
+                            950: '#070a13'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="theme-amethyst min-h-screen flex flex-col bg-slate-950 text-slate-100">
+
+    <!-- ==================== LIVELY APP LOADING SCREEN (FACULTY) ==================== -->
+    <div id="app-loading-screen">
+        <div class="loader-glow-orb" style="background: radial-gradient(circle, rgba(139, 92, 246, 0.28) 0%, rgba(99, 102, 241, 0.08) 50%, transparent 70%);"></div>
+        <div class="relative flex flex-col items-center">
+            <div class="relative w-16 h-16 rounded-2xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-cyan-400 p-0.5 shadow-2xl shadow-purple-500/40 mb-4">
+                <div class="loader-spin-ring" style="border-top-color: #a855f7; border-right-color: #6366f1;"></div>
+                <div class="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
+                    <svg class="w-8 h-8 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                    </svg>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <h2 class="text-xl font-extrabold tracking-tight bg-gradient-to-r from-white via-purple-100 to-purple-400 bg-clip-text text-transparent">
+                    NexusEdu AI
+                </h2>
+                <span class="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase bg-purple-500/20 text-purple-300 border border-purple-500/30">Faculty Portal</span>
+            </div>
+            <p class="text-xs text-slate-400 mt-1.5 font-medium tracking-wide">Loading Multi-Section Supervision & Grading Studio...</p>
+            
+            <div class="loader-progress-track">
+                <div class="loader-progress-bar" style="background: linear-gradient(90deg, #a855f7, #6366f1, #06b6d4);"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.CURRENT_USER = {{ user | tojson | safe }};
+        window.FIREBASE_CONFIG = {{ firebase_config | tojson | safe }};
+        window.INITIAL_TAB = "overview";
+        window._facultyActiveSection = "all";
+    </script>
+
+    <!-- ==================== TOP NAVIGATION BAR ==================== -->
+    <header class="sticky top-0 z-40 bg-slate-950/85 backdrop-blur-xl border-b border-purple-500/20 px-4 lg:px-8 py-3">
+        <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
+            
+            <!-- Brand Logo & Faculty Portal Badge -->
+            <div class="flex items-center gap-3">
+                <a href="/college" class="flex items-center gap-2.5 group" title="Faculty Management Dashboard">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-cyan-400 p-0.5 shadow-lg shadow-purple-500/30">
+                        <div class="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
+                            <svg class="w-5 h-5 text-purple-400 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="font-extrabold text-lg tracking-tight bg-gradient-to-r from-white via-purple-100 to-purple-400 bg-clip-text text-transparent">NexusEdu AI</span>
+                            <span class="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider bg-purple-500/20 text-purple-300 border border-purple-500/40">
+                                Faculty Portal
+                            </span>
+                        </div>
+                        <p class="text-[11px] text-slate-400 hidden sm:block">Cohort Supervision, Multi-Section Grading & Coursework</p>
+                    </div>
+                </a>
+
+                <a href="/" class="hidden xl:inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-900 hover:bg-slate-800 text-[11px] font-semibold text-slate-300 border border-white/10 transition-colors">
+                    <span>🏠 Landing Hub</span>
+                </a>
+            </div>
+
+            <!-- Header Class Section Switcher (Key Distinction Feature) -->
+            <div class="hidden md:flex items-center gap-1.5 p-1 rounded-xl bg-slate-900/90 border border-purple-500/30 text-xs">
+                <span class="text-[10px] uppercase font-bold text-purple-300 px-2 tracking-wider">Class Section:</span>
+                <button onclick="filterFacultySection('all')" data-section="all" class="faculty-section-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-md shadow-indigo-600/30 transition-all">
+                    All Sections
+                </button>
+                <button onclick="filterFacultySection('Section A')" data-section="Section A" class="faculty-section-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-white/10 transition-all">
+                    Section A
+                </button>
+                <button onclick="filterFacultySection('Section B')" data-section="Section B" class="faculty-section-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-white/10 transition-all">
+                    Section B
+                </button>
+                <button onclick="filterFacultySection('Section C')" data-section="Section C" class="faculty-section-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-white/10 transition-all">
+                    Section C
+                </button>
+            </div>
+
+            <!-- Fast Action Pills & Profile -->
+            <div class="flex items-center gap-2 sm:gap-3">
+                <a id="faculty-export-csv-btn" href="/api/college/export-csv?section=all" class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-600/30 transition-all">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    <span class="hidden sm:inline">Export CSV</span>
+                </a>
+
+                <!-- Dedicated Faculty Role Pill -->
+                <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-300 text-xs font-bold">
+                    <span>🏫 Faculty Admin</span>
+                </div>
+
+                <!-- User Profile Dropdown -->
+                <div class="relative group pl-2 border-l border-white/10">
+                    <button id="account-menu-trigger" type="button" onclick="toggleAccountMenu(event)" aria-haspopup="true" aria-expanded="false" class="flex items-center gap-2 p-1 rounded-xl hover:bg-white/5 transition-colors">
+                        <img src="{{ user.avatar_url }}" alt="{{ user.display_name }}" class="w-9 h-9 rounded-xl bg-slate-800 p-0.5 border border-purple-500/40">
+                        <div class="hidden lg:block text-left text-xs leading-tight">
+                            <span class="block font-bold text-white truncate max-w-[120px]">{{ user.display_name }}</span>
+                            <span class="text-[10px] text-purple-400 font-mono">{{ user.college_id }}</span>
+                        </div>
+                        <svg class="w-3 h-3 text-slate-400 hidden lg:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+
+                    <!-- Account Menu -->
+                    <div id="account-menu" class="absolute right-0 mt-2 w-64 rounded-2xl glass-dropdown p-2.5 hidden group-hover:block transition-all z-50 shadow-2xl border border-purple-500/30">
+                        <div class="px-3 py-2 border-b border-white/10 mb-1">
+                            <p class="font-bold text-xs text-white">{{ user.display_name }}</p>
+                            <p class="text-[11px] text-slate-400 truncate">{{ user.email }}</p>
+                            <span class="mt-1 inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/20 text-purple-300">Faculty Role • Multi-Section Admin</span>
+                        </div>
+
+                        <a href="/" class="w-full text-left px-3 py-2 rounded-xl text-xs font-medium hover:bg-white/10 text-slate-300 flex items-center gap-2">
+                            <span>🏠 Campus Landing Page</span>
+                        </a>
+
+                        <div class="border-t border-white/10 my-1.5"></div>
+
+                        <a href="/login?switch=1" class="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold hover:bg-white/10 text-slate-300 flex items-center gap-2">
+                            <span>🔑 Switch Account</span>
+                        </a>
+                        <a href="/logout" class="w-full text-left px-3 py-2 rounded-xl text-xs font-bold hover:bg-rose-950/40 text-rose-400 flex items-center gap-2">
+                            <span>🚪 Sign Out</span>
+                        </a>
+                    </div>
+                </div>
+
+                <a href="/logout" class="hidden sm:inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-rose-950/40 text-[11px] font-bold text-slate-400 hover:text-rose-300 border border-white/10 hover:border-rose-500/30 transition-all">
+                    <span>Sign Out</span>
+                </a>
+            </div>
+
+        </div>
+    </header>
+
+    <!-- ==================== FACULTY HERO BANNER ==================== -->
+    <div class="max-w-7xl mx-auto w-full px-4 lg:px-8 mt-6">
+        <div class="relative rounded-2xl p-6 md:p-8 overflow-hidden shadow-2xl border border-purple-500/30 bg-gradient-to-r from-purple-950/90 via-slate-950 to-indigo-950/90">
+            <div class="absolute inset-0 bg-radial-at-c from-purple-500/10 via-transparent to-transparent pointer-events-none"></div>
+
+            <div class="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                
+                <!-- Faculty Profile Details -->
+                <div class="flex flex-col sm:flex-row items-start sm:items-center gap-5">
+                    <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-slate-950 p-2 border-2 border-purple-500/60 shadow-2xl shadow-purple-500/30 flex items-center justify-center shrink-0">
+                        <img src="{{ user.avatar_url }}" alt="{{ user.display_name }}" class="w-full h-full object-contain">
+                    </div>
+
+                    <div>
+                        <div class="flex flex-wrap items-center gap-2 mb-1">
+                            <h1 class="text-2xl md:text-3xl font-extrabold text-white tracking-tight">{{ user.display_name }}</h1>
+                            <span class="px-3 py-0.5 rounded-full text-xs font-extrabold bg-purple-500/20 text-purple-300 border border-purple-500/40">
+                                {{ user.equipped_title or 'Head of Department' }}
+                            </span>
+                        </div>
+                        <p class="text-xs text-slate-300 font-mono mb-2">
+                            {{ user.department }} • Employee ID: <strong class="text-purple-300">{{ user.college_id }}</strong>
+                        </p>
+                        
+                        <!-- Class Sections Managed Badges -->
+                        <div class="flex flex-wrap items-center gap-2 text-xs">
+                            <span class="text-slate-400 text-[11px] font-semibold">Supervising Sections:</span>
+                            <span class="px-2.5 py-0.5 rounded-full font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-mono">Section A</span>
+                            <span class="px-2.5 py-0.5 rounded-full font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30 font-mono">Section B</span>
+                            <span class="px-2.5 py-0.5 rounded-full font-bold bg-teal-500/20 text-teal-300 border border-teal-500/30 font-mono">Section C</span>
+                            <span class="text-slate-500">|</span>
+                            <span class="text-xs text-cyan-300 font-bold" id="faculty-active-section-display">All Sections Cohort</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Fast Switcher Buttons for Faculty -->
+                <div class="flex flex-wrap items-center gap-2.5 self-start lg:self-center">
+                    <button onclick="switchFacultyTab('assignment-studio')" class="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-md shadow-purple-600/30 transition-all flex items-center gap-1.5">
+                        <span>📝 Publish Assignment</span>
+                    </button>
+                    <button onclick="switchFacultyTab('course-materials')" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md shadow-indigo-600/30 transition-all flex items-center gap-1.5">
+                        <span>📚 Upload Notes/Files</span>
+                    </button>
+                    <button onclick="switchFacultyTab('notices-board')" class="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-white/10 text-xs font-semibold transition-all">
+                        <span>📢 Broadcast Notice</span>
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MAIN CONTENT WRAPPER ==================== -->
+    <div class="max-w-7xl mx-auto w-full px-4 lg:px-8 py-6 flex-1 flex flex-col md:flex-row gap-6">
+
+        <!-- Faculty Sidebar Navigation -->
+        <aside aria-label="Faculty navigation" class="dashboard-nav w-full md:w-64 shrink-0 flex flex-row md:flex-col gap-1.5 overflow-x-auto md:overflow-visible pb-2 md:pb-0">
+            
+            <p class="text-[11px] font-bold uppercase tracking-wider text-purple-400 px-3 hidden md:block mt-2 mb-1">Faculty Portal</p>
+
+            <button onclick="switchFacultyTab('overview')" data-tab="overview" class="faculty-nav-btn active w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-md transition-all text-left whitespace-nowrap">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                <span>Cohort Overview</span>
+            </button>
+
+            <button onclick="switchFacultyTab('section-roster')" data-tab="section-roster" class="faculty-nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-300 hover:text-white hover:bg-white/5 transition-all text-left whitespace-nowrap">
+                <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                <span>Class Section Roster</span>
+            </button>
+
+            <button onclick="switchFacultyTab('risk-radar')" data-tab="risk-radar" class="faculty-nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-300 hover:text-white hover:bg-white/5 transition-all text-left whitespace-nowrap">
+                <svg class="w-4 h-4 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                <span>Student Risk Radar</span>
+            </button>
+
+            <button onclick="switchFacultyTab('assignment-studio')" data-tab="assignment-studio" class="faculty-nav-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-300 hover:text-white hover:bg-white/5 transition-all text-left whitespace-nowrap">
+                <div class="flex items-center gap-3">
+                    <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    <span>Assignment Studio</span>
+                </div>
+            </button>
+
+            <button onclick="switchFacultyTab('grading-studio')" data-tab="grading-studio" class="faculty-nav-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-300 hover:text-white hover:bg-white/5 transition-all text-left whitespace-nowrap">
+                <div class="flex items-center gap-3">
+                    <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+                    <span>Grading & Submissions</span>
+                </div>
+                <span id="faculty-pending-badge" class="hidden px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/30" aria-label="Submissions needing review">0</span>
+            </button>
+
+            <button onclick="switchFacultyTab('course-materials')" data-tab="course-materials" class="faculty-nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-300 hover:text-white hover:bg-white/5 transition-all text-left whitespace-nowrap">
+                <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+                <span>Course Materials Hub</span>
+            </button>
+
+            <button onclick="switchFacultyTab('notices-board')" data-tab="notices-board" class="faculty-nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-300 hover:text-white hover:bg-white/5 transition-all text-left whitespace-nowrap">
+                <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"></path></svg>
+                <span>Campus Notice Board</span>
+            </button>
+
+            <button onclick="switchFacultyTab('accreditation')" data-tab="accreditation" class="faculty-nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-300 hover:text-white hover:bg-white/5 transition-all text-left whitespace-nowrap">
+                <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                <span>Accreditation Reports</span>
+            </button>
+
+        </aside>
+
+        <!-- Dynamic Faculty Views Area -->
+        <main class="flex-1 min-w-0">
+
+            <!-- ==================== TAB 1: COHORT OVERVIEW ==================== -->
+            <div id="faculty-view-overview" class="faculty-view-content space-y-6">
+                
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-2xl font-extrabold text-white flex items-center gap-2">
+                            <span>Executive Cohort Intelligence</span>
+                        </h2>
+                        <p class="text-xs text-slate-400">Real-time supervision across multi-section cohorts, grading pipelines, and risk distribution</p>
+                    </div>
+                    
+                    <!-- Section Quick Filter Pills in Header -->
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="text-xs text-slate-400">Filter Section:</span>
+                        <button onclick="filterFacultySection('all')" class="px-3 py-1 rounded-lg text-xs font-bold bg-indigo-600 text-white">All</button>
+                        <button onclick="filterFacultySection('Section A')" class="px-3 py-1 rounded-lg text-xs font-semibold bg-slate-900 text-slate-300 hover:text-white border border-white/10">Sec A</button>
+                        <button onclick="filterFacultySection('Section B')" class="px-3 py-1 rounded-lg text-xs font-semibold bg-slate-900 text-slate-300 hover:text-white border border-white/10">Sec B</button>
+                        <button onclick="filterFacultySection('Section C')" class="px-3 py-1 rounded-lg text-xs font-semibold bg-slate-900 text-slate-300 hover:text-white border border-white/10">Sec C</button>
+                    </div>
+                </div>
+
+                <!-- 4 Top Level Cohort Metric Cards -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="glass-panel p-5">
+                        <span class="text-xs text-slate-400 uppercase font-semibold">Cohort Students</span>
+                        <h3 class="text-3xl font-extrabold text-white mt-1" id="cohort-total-students">--</h3>
+                        <p class="text-[11px] text-cyan-400 mt-1 font-mono">Enrolled in active view</p>
+                    </div>
+                    <div class="glass-panel p-5">
+                        <span class="text-xs text-slate-400 uppercase font-semibold">Active Assignments</span>
+                        <h3 class="text-3xl font-extrabold text-purple-400 mt-1" id="cohort-total-assignments">--</h3>
+                        <p class="text-[11px] text-purple-300 mt-1 font-mono">Published curriculum units</p>
+                    </div>
+                    <div class="glass-panel p-5">
+                        <span class="text-xs text-slate-400 uppercase font-semibold">Graded Solutions</span>
+                        <h3 class="text-3xl font-extrabold text-emerald-400 mt-1" id="cohort-graded-count">--</h3>
+                        <p class="text-[11px] text-emerald-300 mt-1 font-mono">Evaluated & published</p>
+                    </div>
+                    <div class="glass-panel p-5 glow-pink">
+                        <span class="text-xs text-slate-400 uppercase font-semibold">Pending Grading</span>
+                        <h3 class="text-3xl font-extrabold text-amber-400 mt-1" id="cohort-pending-grading">--</h3>
+                        <p class="text-[11px] text-amber-300 mt-1 font-mono">Awaiting teacher review</p>
+                    </div>
+                </div>
+
+                <!-- Class Section Comparison Matrix (Direct Answer to Distinction requirement) -->
+                <div class="glass-panel p-6 border-purple-500/30 glow-primary">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 class="font-extrabold text-white text-base flex items-center gap-2">
+                                <span>🏫 Class Section Comparison & Performance Matrix</span>
+                            </h3>
+                            <p class="text-xs text-slate-400">Distinguish student enrollment, average algorithm XP, and grading workload between sections</p>
+                        </div>
+                    </div>
+                    
+                    <div id="cohort-section-breakdown" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+                </div>
+
+                <!-- Two-Column Quick Action Panels -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    
+                    <!-- At-Risk Alert Preview -->
+                    <div class="glass-panel p-6 border-rose-500/20">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="font-bold text-white text-base flex items-center gap-2">
+                                <span>🎯 At-Risk Students Radar</span>
+                            </h3>
+                            <button onclick="switchFacultyTab('risk-radar')" class="text-xs text-indigo-400 hover:underline font-semibold">View All →</button>
+                        </div>
+                        <p class="text-xs text-slate-400 mb-4">Students requiring academic intervention in the active section</p>
+                        <div id="cohort-risk-radar-preview" class="space-y-2.5"></div>
+                    </div>
+
+                    <!-- Pending Submissions Preview -->
+                    <div class="glass-panel p-6 border-amber-500/20">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="font-bold text-white text-base flex items-center gap-2">
+                                <span>📝 Recent Submissions for Review</span>
+                            </h3>
+                            <button onclick="switchFacultyTab('grading-studio')" class="text-xs text-amber-400 hover:underline font-semibold">Open Grading Studio →</button>
+                        </div>
+                        <p class="text-xs text-slate-400 mb-4">Submissions waiting for your review</p>
+                        <div id="cohort-submissions-preview" class="space-y-2.5"></div>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- ==================== TAB 2: CLASS SECTION ROSTER & DIRECTORY ==================== -->
+            <div id="faculty-view-section-roster" class="faculty-view-content hidden space-y-6">
+                
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-2xl font-extrabold text-white flex items-center gap-2">
+                            <span>👥 Class Section Student Directory</span>
+                        </h2>
+                        <p class="text-xs text-slate-400">Distinguish, filter, and inspect enrolled students across Section A, Section B, and Section C</p>
+                    </div>
+
+                    <!-- Search Input -->
+                    <div class="relative w-full sm:w-64">
+                        <input type="text" oninput="filterFacultyStudentSearch(this.value)" placeholder="Search name, roll, section..." class="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500">
+                        <span class="absolute right-3 top-2 text-slate-500 text-xs">🔍</span>
+                    </div>
+                </div>
+
+                <!-- Section Selector Bar -->
+                <div class="flex flex-wrap items-center gap-2 p-2 rounded-2xl bg-slate-900/80 border border-white/5">
+                    <span class="text-xs font-bold text-slate-300 px-2">Show Section:</span>
+                    <button onclick="filterFacultySection('all')" data-section="all" class="faculty-section-btn px-3.5 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 text-white">All Sections</button>
+                    <button onclick="filterFacultySection('Section A')" data-section="Section A" class="faculty-section-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-slate-300 hover:text-white border border-white/10">Section A (CS)</button>
+                    <button onclick="filterFacultySection('Section B')" data-section="Section B" class="faculty-section-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-slate-300 hover:text-white border border-white/10">Section B (CS)</button>
+                    <button onclick="filterFacultySection('Section C')" data-section="Section C" class="faculty-section-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-slate-300 hover:text-white border border-white/10">Section C (IT)</button>
+                </div>
+
+                <!-- Roster Table -->
+                <div class="glass-panel p-6 border-white/10 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="text-xs uppercase text-slate-400 border-b border-white/10">
+                                    <th class="py-3 px-4">Student</th>
+                                    <th class="py-3 px-4">Class Section</th>
+                                    <th class="py-3 px-4">Roll Number</th>
+                                    <th class="py-3 px-4">Verified XP</th>
+                                    <th class="py-3 px-4">Dev Handles</th>
+                                    <th class="py-3 px-4">Academic Status</th>
+                                    <th class="py-3 px-4 text-right">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cohort-student-roster-table"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ==================== TAB 3: STUDENT RISK RADAR ==================== -->
+            <div id="faculty-view-risk-radar" class="faculty-view-content hidden space-y-6">
+                
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-2xl font-extrabold text-white flex items-center gap-2">
+                            <span>🎯 Student Cohort Risk Radar</span>
+                        </h2>
+                        <p class="text-xs text-slate-400">Pinpoint students requiring academic intervention or coding mentorship categorized by section</p>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-slate-400">Section:</span>
+                        <button onclick="filterFacultySection('all')" class="px-3 py-1 rounded-lg text-xs font-bold bg-indigo-600 text-white">All</button>
+                        <button onclick="filterFacultySection('Section A')" class="px-3 py-1 rounded-lg text-xs font-semibold bg-slate-900 text-slate-300 hover:text-white border border-white/10">Sec A</button>
+                        <button onclick="filterFacultySection('Section B')" class="px-3 py-1 rounded-lg text-xs font-semibold bg-slate-900 text-slate-300 hover:text-white border border-white/10">Sec B</button>
+                        <button onclick="filterFacultySection('Section C')" class="px-3 py-1 rounded-lg text-xs font-semibold bg-slate-900 text-slate-300 hover:text-white border border-white/10">Sec C</button>
+                    </div>
+                </div>
+
+                <div class="glass-panel p-6 border-rose-500/30">
+                    <div id="cohort-risk-radar" class="space-y-3"></div>
+                </div>
+
+            </div>
+
+            <!-- ==================== TAB 4: ASSIGNMENT STUDIO ==================== -->
+            <div id="faculty-view-assignment-studio" class="faculty-view-content hidden space-y-6">
+                
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-2xl font-extrabold text-white flex items-center gap-2">
+                            <span>📝 Coursework & Assignment Studio</span>
+                        </h2>
+                        <p class="text-xs text-slate-400">Publish coursework targeted to specific class sections or cohort-wide with AI drafting support</p>
+                    </div>
+                    <button type="button" id="ai-gen-assign-btn" onclick="handleAIGenerateAssignment()" class="px-3.5 py-2 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40 text-xs font-bold transition-all flex items-center gap-1.5">
+                        <span>✨ Generate with Gemini AI</span>
+                    </button>
+                </div>
+
+                <!-- Publish Assignment Form -->
+                <div class="glass-panel p-6 border-purple-500/30">
+                    <form id="create-assignment-form" class="space-y-4 text-xs">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-slate-300 font-semibold mb-1">Assignment Title</label>
+                                <input type="text" id="assign-title" required placeholder="e.g. Distributed Key-Value Store with Raft" class="w-full bg-slate-900 border border-white/10 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-slate-300 font-semibold mb-1">Target Class Section (Distinguish Students)</label>
+                                <select id="assign-section" class="w-full bg-slate-900 border border-purple-500/40 rounded-xl p-2.5 text-purple-300 font-bold focus:outline-none focus:border-purple-500">
+                                    <option value="All Sections">All Sections (Broadcast to Everyone)</option>
+                                    <option value="Section A">Section A only</option>
+                                    <option value="Section B">Section B only</option>
+                                    <option value="Section C">Section C only</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-slate-300 font-semibold mb-1">Course Name</label>
+                                <input type="text" id="assign-subject" required placeholder="Distributed Systems" class="w-full bg-slate-900 border border-white/10 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-slate-300 font-semibold mb-1">Subject Code</label>
+                                <input type="text" id="assign-subject-code" required placeholder="CS-504" class="w-full bg-slate-900 border border-white/10 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-slate-300 font-semibold mb-1">Due Date</label>
+                                <input type="date" id="assign-due-date" required class="w-full bg-slate-900 border border-white/10 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-slate-300 font-semibold mb-1">Total Points</label>
+                                <input type="number" id="assign-points" value="100" min="1" max="1000" required class="w-full bg-slate-900 border border-white/10 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-slate-300 font-semibold mb-1">Difficulty</label>
+                                <select id="assign-difficulty" class="w-full bg-slate-900 border border-white/10 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500">
+                                    <option value="Medium">Medium</option>
+                                    <option value="Challenging">Challenging</option>
+                                    <option value="Easy">Easy</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-slate-300 font-semibold mb-1">Topic Tags</label>
+                            <input type="text" id="assign-tags" placeholder="Raft, Consensus, Concurrency" class="w-full bg-slate-900 border border-white/10 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-slate-300 font-semibold mb-1">Description & Requirements</label>
+                            <textarea id="assign-description" required rows="3" placeholder="Explain the problem requirements, constraints, and test suites..." class="w-full bg-slate-900 border border-white/10 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500"></textarea>
+                        </div>
+
+                        <div>
+                            <label class="block text-slate-300 font-semibold mb-1">Starter Boilerplate Code (Optional)</label>
+                            <textarea id="assign-starter-code" rows="2" placeholder="// Starter code, class outlines, or unit test stubs..." class="w-full bg-slate-900 border border-white/10 rounded-xl p-2.5 text-white font-mono text-xs focus:outline-none focus:border-indigo-500"></textarea>
+                        </div>
+
+                        <div>
+                            <label class="block text-slate-300 font-semibold mb-1">Attach Coursework File (PDF, Problem Sheet, Starter Zip, Datasets)</label>
+                            <input type="file" id="assign-file" class="w-full bg-slate-900 border border-white/10 rounded-xl p-2 text-white text-xs file:mr-3 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-purple-600 file:text-white hover:file:bg-purple-500 cursor-pointer">
+                        </div>
+
+                        <button type="submit" class="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold transition-all shadow-md shadow-purple-600/30">
+                            Post Assignment to Target Section
+                        </button>
+                    </form>
+                </div>
+
+                <div class="glass-panel p-6">
+                    <h3 class="font-bold text-white text-base mb-4">Published Section Assignments</h3>
+                    <div id="faculty-assignments-list" class="space-y-3"></div>
+                </div>
+
+            </div>
+
+            <!-- ==================== TAB 5: GRADING & SUBMISSIONS STUDIO ==================== -->
+            <div id="faculty-view-grading-studio" class="faculty-view-content hidden space-y-6">
+                
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-2xl font-extrabold text-white flex items-center gap-2">
+                            <span>🎓 Submissions & Grading Studio</span>
+                        </h2>
+                        <p class="text-xs text-slate-400">Review student code, evaluate attached solution archives, and apply AI rubrics</p>
+                    </div>
+
+                    <!-- Filter by Section in Grading -->
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-slate-400">Filter Section:</span>
+                        <button onclick="filterFacultySection('all')" class="px-3 py-1 rounded-lg text-xs font-bold bg-indigo-600 text-white">All</button>
+                        <button onclick="filterFacultySection('Section A')" class="px-3 py-1 rounded-lg text-xs font-semibold bg-slate-900 text-slate-300 hover:text-white border border-white/10">Sec A</button>
+                        <button onclick="filterFacultySection('Section B')" class="px-3 py-1 rounded-lg text-xs font-semibold bg-slate-900 text-slate-300 hover:text-white border border-white/10">Sec B</button>
+                        <button onclick="filterFacultySection('Section C')" class="px-3 py-1 rounded-lg text-xs font-semibold bg-slate-900 text-slate-300 hover:text-white border border-white/10">Sec C</button>
+                    </div>
+                </div>
+
+                <div class="glass-panel p-6">
+                    <div class="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between mb-4">
+                        <label class="flex-1">
+                            <span class="sr-only">Search submissions</span>
+                            <input id="grading-search" type="search" oninput="filterGradingQueue()" placeholder="Search student, roll number, or assignment" class="w-full bg-slate-900 border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-400">
+                        </label>
+                        <label class="flex items-center gap-2 text-xs text-slate-400">
+                            Status
+                            <select id="grading-status-filter" onchange="filterGradingQueue()" class="bg-slate-900 border border-white/10 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-indigo-400">
+                                <option value="pending">Needs review</option>
+                                <option value="all">All submissions</option>
+                                <option value="graded">Graded</option>
+                            </select>
+                        </label>
+                        <span id="grading-result-count" class="text-xs text-slate-400" aria-live="polite"></span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="text-xs uppercase text-slate-400 border-b border-white/10">
+                                    <th class="py-3 px-4">Student</th>
+                                    <th class="py-3 px-4">Section</th>
+                                    <th class="py-3 px-4">Assignment</th>
+                                    <th class="py-3 px-4">Submitted Solution</th>
+                                    <th class="py-3 px-4">Status</th>
+                                    <th class="py-3 px-4 text-right">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cohort-submissions-table"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ==================== TAB 6: COURSE MATERIALS HUB ==================== -->
+            <div id="faculty-view-course-materials" class="faculty-view-content hidden space-y-6">
+                
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-2xl font-extrabold text-white flex items-center gap-2">
+                            <span>📚 Course Materials & Resources</span>
+                        </h2>
+                        <p class="text-xs text-slate-400">Share lecture slides, reference cheat sheets, code archives, and syllabi</p>
+                    </div>
+                </div>
+
+                <div class="glass-panel p-6 border-indigo-500/30">
+                    <form id="upload-material-form" class="space-y-4 text-xs mb-6 p-4 rounded-xl bg-slate-900/60 border border-white/5">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-slate-300 font-semibold mb-1">Resource Title</label>
+                                <input type="text" id="mat-title" required placeholder="e.g. Distributed Systems Lecture 04: Raft Consensus PDF" class="w-full bg-slate-950 border border-white/10 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-slate-300 font-semibold mb-1">Course / Subject Name</label>
+                                <input type="text" id="mat-subject" required placeholder="Distributed Systems" class="w-full bg-slate-950 border border-white/10 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-slate-300 font-semibold mb-1">Target Class Section</label>
+                                <select id="mat-section" class="w-full bg-slate-950 border border-purple-500/40 rounded-xl p-2.5 text-purple-300 font-bold focus:outline-none focus:border-indigo-500">
+                                    <option value="All Sections">All Sections</option>
+                                    <option value="Section A">Section A</option>
+                                    <option value="Section B">Section B</option>
+                                    <option value="Section C">Section C</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-slate-300 font-semibold mb-1">Description & Topic Notes</label>
+                            <input type="text" id="mat-desc" placeholder="Comprehensive slides covering leader election, log replication, and safety proofs..." class="w-full bg-slate-950 border border-white/10 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-slate-300 font-semibold mb-1">Choose File to Upload (PDF, ZIP, PPTX, PY, DOCX, TXT, etc.)</label>
+                            <input type="file" id="mat-file" required class="w-full bg-slate-950 border border-white/10 rounded-xl p-2 text-white text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500 cursor-pointer">
+                        </div>
+
+                        <button type="submit" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold transition-all shadow-md shadow-indigo-600/30 flex items-center justify-center gap-2">
+                            <span>📤 Upload & Share Resource to Section</span>
+                        </button>
+                    </form>
+
+                    <h4 class="text-xs uppercase font-bold text-slate-400 mb-3 tracking-wider">Shared Materials Repository</h4>
+                    <div id="faculty-materials-list" class="space-y-3"></div>
+                </div>
+
+            </div>
+
+            <!-- ==================== TAB 7: CAMPUS NOTICES BOARD ==================== -->
+            <div id="faculty-view-notices-board" class="faculty-view-content hidden space-y-6">
+                
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-2xl font-extrabold text-white flex items-center gap-2">
+                            <span>📢 Campus Notice Board & Circulars</span>
+                        </h2>
+                        <p class="text-xs text-slate-400">Broadcast official academic announcements, placement notifications, and event alerts</p>
+                    </div>
+                </div>
+
+                <div class="glass-panel p-6">
+                    <form id="create-notice-form" class="space-y-4 text-xs mb-8">
+                        <div>
+                            <label class="block text-slate-300 font-semibold mb-1">Notice Title</label>
+                            <input type="text" id="notice-title" required placeholder="e.g. Google Placement Talk or Exam Timetable" class="w-full bg-slate-900 border border-white/10 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500">
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-slate-300 font-semibold mb-1">Category</label>
+                                <select id="notice-category" class="w-full bg-slate-900 border border-white/10 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500">
+                                    <option value="Urgent">Urgent Circular</option>
+                                    <option value="Placement">Campus Placement</option>
+                                    <option value="Academic">Academic Schedule</option>
+                                    <option value="Hackathon">Hackathon / Event</option>
+                                    <option value="General">General Notice</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-slate-300 font-semibold mb-1">Attachment Link (Optional)</label>
+                                <input type="url" id="notice-link" placeholder="https://college.edu/circular.pdf" class="w-full bg-slate-900 border border-white/10 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-slate-300 font-semibold mb-1">Notice Content</label>
+                            <textarea id="notice-content" required rows="3" placeholder="Provide full details, eligibility, venue, or instructions..." class="w-full bg-slate-900 border border-white/10 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500"></textarea>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" id="notice-important" class="rounded bg-slate-900 border-white/20 text-indigo-600 focus:ring-0">
+                            <label for="notice-important" class="text-slate-300 font-medium">Mark as High-Priority Urgent Notice</label>
+                        </div>
+
+                        <button type="submit" class="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition-all shadow-md shadow-indigo-600/30">
+                            Broadcast Notice
+                        </button>
+                    </form>
+
+                    <h4 class="text-xs uppercase font-bold text-slate-400 mb-3 tracking-wider">Live Campus Notices Feed</h4>
+                    <div id="notices-feed" class="space-y-4"></div>
+                </div>
+
+            </div>
+
+            <!-- ==================== TAB 8: ACCREDITATION REPORTS ==================== -->
+            <div id="faculty-view-accreditation" class="faculty-view-content hidden space-y-6">
+                
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-2xl font-extrabold text-white flex items-center gap-2">
+                            <span>📋 Accreditation Reports & NBA/NAAC Auditing</span>
+                        </h2>
+                        <p class="text-xs text-slate-400">Export accredited multi-section student metrics, verified problem-solving velocity, and GitHub commits</p>
+                    </div>
+
+                    <a id="faculty-tab-export-csv-btn" href="/api/college/export-csv?section=all" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-emerald-600/30 transition-all">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        <span>Download Accreditation CSV</span>
+                    </a>
+                </div>
+
+                <div class="glass-panel p-6 border-emerald-500/20">
+                    <h3 class="font-bold text-white text-base mb-2">Audit Compliance Overview</h3>
+                    <p class="text-xs text-slate-300 mb-6">The export file includes authenticated LeetCode ranking, public repository commits, college roll numbers, and assigned Class Section for compliance with NBA Criteria 2 & 4.</p>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="p-4 rounded-xl bg-slate-900/60 border border-white/5">
+                            <span class="text-[10px] text-slate-400 uppercase font-semibold block">Section Breakdown</span>
+                            <span class="text-lg font-bold text-white font-mono">Sections A, B, C</span>
+                            <p class="text-[11px] text-slate-400 mt-1">Full cohort coverage</p>
+                        </div>
+                        <div class="p-4 rounded-xl bg-slate-900/60 border border-white/5">
+                            <span class="text-[10px] text-slate-400 uppercase font-semibold block">Accreditation Readiness</span>
+                            <span class="text-lg font-bold text-emerald-400 font-mono">94% Compliant</span>
+                            <p class="text-[11px] text-emerald-400/80 mt-1">Verified Git & DSA portfolios</p>
+                        </div>
+                        <div class="p-4 rounded-xl bg-slate-900/60 border border-white/5">
+                            <span class="text-[10px] text-slate-400 uppercase font-semibold block">Format</span>
+                            <span class="text-lg font-bold text-cyan-400 font-mono">Standard CSV</span>
+                            <p class="text-[11px] text-slate-400 mt-1">Ready for Excel, ERP, or NAAC</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </main>
+
+    </div>
+
+    <!-- ==================== GRADING STUDIO MODAL ==================== -->
+    <div id="grading-modal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md hidden flex items-center justify-center p-4">
+        <div class="glass-panel max-w-2xl w-full p-6 relative border-purple-500/40 shadow-2xl max-h-[90vh] overflow-y-auto modal-content-animated">
+            <div class="flex items-center justify-between pb-3 border-b border-white/10 mb-4">
+                <div>
+                    <h3 class="text-lg font-bold text-white">Grading & Evaluation Studio</h3>
+                    <p class="text-xs text-slate-400">Review solution, run Gemini AI evaluation, and publish marks</p>
+                </div>
+                <button onclick="closeGradingModal()" class="text-slate-400 hover:text-white text-lg">✕</button>
+            </div>
+
+            <div class="space-y-4 text-xs">
+                <div class="p-3.5 rounded-xl bg-slate-900/80 border border-white/5 grid grid-cols-2 gap-3">
+                    <div>
+                        <span class="text-slate-400 text-[10px] uppercase font-semibold block">Student</span>
+                        <strong class="text-white text-sm" id="grade-student-name">--</strong>
+                    </div>
+                    <div>
+                        <span class="text-slate-400 text-[10px] uppercase font-semibold block">Assignment</span>
+                        <strong class="text-white text-sm" id="grade-assignment-title">--</strong>
+                    </div>
+                </div>
+
+                <div id="grade-preview-link-container" class="p-3 rounded-xl bg-slate-900/60 border border-white/5 hidden">
+                    <span class="text-slate-400 font-semibold block text-[10px] uppercase mb-1">Submitted Repository / Solution URL:</span>
+                    <a id="grade-preview-link" href="#" target="_blank" class="text-cyan-400 hover:underline font-mono text-xs flex items-center gap-1.5 break-all"></a>
+                </div>
+
+                <div id="grade-preview-file-container" class="p-3 rounded-xl bg-slate-900/60 border border-white/5 hidden"></div>
+
+                <div class="p-3 rounded-xl bg-slate-900/60 border border-white/5">
+                    <span class="text-slate-400 font-semibold block text-[10px] uppercase mb-1">Student Notes & Approach:</span>
+                    <p id="grade-preview-notes" class="text-xs text-slate-200 leading-relaxed font-mono whitespace-pre-wrap"></p>
+                </div>
+
+                <!-- AI Evaluation Button -->
+                <button type="button" id="ai-evaluate-btn" onclick="handleAIEvaluateSubmission()" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-500 hover:from-purple-500 hover:to-cyan-400 text-white font-extrabold text-xs shadow-lg shadow-purple-600/30 transition-all flex items-center justify-center gap-2">
+                    <span>🤖 AI Auto-Evaluate & Suggest Rubric (Gemini)</span>
+                </button>
+
+                <!-- Grading Form -->
+                <form id="grading-submission-form" class="space-y-4 pt-2">
+                    <input type="hidden" id="grade-sub-id">
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-slate-300 font-semibold mb-1">Awarded Points (Max: <span id="grade-max-points">100</span>)</label>
+                            <input type="number" id="grade-score-input" required min="0" max="100" class="w-full bg-slate-900 border border-white/10 rounded-xl p-2.5 text-white font-bold text-sm focus:outline-none focus:border-indigo-500">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-slate-300 font-semibold mb-1">Detailed Rubric Feedback & Comments</label>
+                        <textarea id="grade-feedback-input" required rows="4" placeholder="Provide constructive feedback, time/space complexity notes, and grading rubric remarks..." class="w-full bg-slate-900 border border-white/10 rounded-xl p-2.5 text-white font-mono text-xs focus:outline-none focus:border-indigo-500"></textarea>
+                    </div>
+
+                    <div class="flex items-center justify-end gap-3 pt-2">
+                        <button type="button" onclick="closeGradingModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold">
+                            Cancel
+                        </button>
+                        <button type="submit" class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow-md shadow-emerald-600/30">
+                            Publish Grade to Student
+                        </button>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase Modal -->
+    <div id="firebase-settings-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+        <div class="glass-panel max-w-md w-full p-6 relative border-purple-500/40 modal-content-animated">
+            <h3 class="text-base font-bold text-white mb-2">🔥 Firebase Status</h3>
+            <p class="text-xs text-slate-300 mb-4">Authentication and backend sync status.</p>
+            <div class="p-3 rounded-xl bg-slate-900 font-mono text-xs text-slate-300 space-y-1">
+                <p>Status: <span class="text-emerald-400 font-bold">Connected</span></p>
+                <p>Project: <span class="text-indigo-400">{{ firebase_config.projectId or 'local-campus-auth' }}</span></p>
+            </div>
+            <button onclick="document.getElementById('firebase-settings-modal').classList.add('hidden')" class="mt-4 w-full py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold">Close</button>
+        </div>
+    </div>
+
+    <!-- Toast Notifications Container -->
+    <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <script src="/static/js/firebase-config.js"></script>
+    <script src="/static/js/college.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelector('.faculty-nav-btn[data-tab="overview"]')?.setAttribute('aria-current', 'page');
+            document.querySelectorAll('.faculty-view-content').forEach(view => view.setAttribute('aria-hidden', String(view.id !== 'faculty-view-overview')));
+            if (window.FIREBASE_CONFIG) {
+                initFirebase(window.FIREBASE_CONFIG);
+            }
+
+            // Check for access restriction notification
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('access_denied') === 'student_portal_restricted') {
+                showToast("Notice: Faculty accounts are directed to the Faculty & College Management Portal.", "info");
+            }
+
+            // Setup Form Listeners
+            const noticeForm = document.getElementById('create-notice-form');
+            if (noticeForm) noticeForm.addEventListener('submit', handleCreateNoticeForm);
+
+            const assignForm = document.getElementById('create-assignment-form');
+            if (assignForm) assignForm.addEventListener('submit', handleCreateAssignmentForm);
+
+            const uploadMatForm = document.getElementById('upload-material-form');
+            if (uploadMatForm) uploadMatForm.addEventListener('submit', handleUploadCourseMaterialForm);
+
+            const gradeForm = document.getElementById('grading-submission-form');
+            if (gradeForm) gradeForm.addEventListener('submit', handleGradeSubmissionForm);
+
+            // Load initial faculty views
+            loadCohortOverview('all');
+            loadNotices();
+            loadFacultyAssignments('all');
+            loadFacultyCourseMaterials('all');
+        });
+
+        function openFirebaseModal() {
+            document.getElementById('firebase-settings-modal')?.classList.remove('hidden');
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+
+            const colors = {
+                success: 'border-emerald-500/40 bg-slate-900/90 text-slate-100 glow-emerald',
+                error: 'border-rose-500/40 bg-slate-900/90 text-slate-100 glow-pink',
+                info: 'border-purple-500/40 bg-slate-900/90 text-slate-100 glow-primary'
+            };
+
+            const toast = document.createElement('div');
+            toast.className = `flex items-center gap-3 p-4 rounded-xl border backdrop-blur-xl shadow-2xl transition-all duration-300 transform translate-y-2 opacity-0 text-sm max-w-md ${colors[type] || colors.info}`;
+            toast.innerHTML = `<span class="font-medium">${message}</span>`;
+
+            container.appendChild(toast);
+            setTimeout(() => toast.classList.remove('translate-y-2', 'opacity-0'), 10);
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-x-4');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+    </script>
+</body>
+</html>
