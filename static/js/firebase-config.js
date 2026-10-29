@@ -122,7 +122,7 @@ function showFirebaseDomainHelperModal() {
     const currentPort = window.location.port ? `:${window.location.port}` : '';
     const isCloudHost = currentHost !== 'localhost' && currentHost !== '127.0.0.1';
     const localhostUrl = `http://localhost${currentPort}${window.location.pathname}${window.location.search}`;
-    const projectId = (window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.projectId) ? window.FIREBASE_CONFIG.projectId : 'brandbuildai-2749e';
+    const projectId = (window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.projectId) ? window.FIREBASE_CONFIG.projectId : 'ai-student-dashboard-3fa4a';
 
     const modal = document.createElement('div');
     modal.id = 'firebase-domain-helper-modal';

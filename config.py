@@ -34,13 +34,13 @@ class Config:
     
     # Official Firebase client configuration with production defaults
     FIREBASE_CONFIG = {
-        "apiKey": os.environ.get("FIREBASE_API_KEY", "AIzaSyDEzSmkRfXfFdlgnghz6QtuuoAwPsLYu3g"),
-        "authDomain": os.environ.get("FIREBASE_AUTH_DOMAIN", "brandbuildai-2749e.firebaseapp.com"),
-        "projectId": os.environ.get("FIREBASE_PROJECT_ID", "brandbuildai-2749e"),
-        "storageBucket": os.environ.get("FIREBASE_STORAGE_BUCKET", "brandbuildai-2749e.firebasestorage.app"),
-        "messagingSenderId": os.environ.get("FIREBASE_MESSAGING_SENDER_ID", "1063131223920"),
-        "appId": os.environ.get("FIREBASE_APP_ID", "1:1063131223920:web:bc9ae6675e2a62f8c4e1b5"),
-        "measurementId": os.environ.get("FIREBASE_MEASUREMENT_ID", "G-PZ59QGRJPH")
+        "apiKey": os.environ.get("FIREBASE_API_KEY", "AIzaSyDHWjWHXa9SJnsd2cnC5XChaFRtHiPGFp0"),
+        "authDomain": os.environ.get("FIREBASE_AUTH_DOMAIN", "ai-student-dashboard-3fa4a.firebaseapp.com"),
+        "projectId": os.environ.get("FIREBASE_PROJECT_ID", "ai-student-dashboard-3fa4a"),
+        "storageBucket": os.environ.get("FIREBASE_STORAGE_BUCKET", "ai-student-dashboard-3fa4a.firebasestorage.app"),
+        "messagingSenderId": os.environ.get("FIREBASE_MESSAGING_SENDER_ID", "891217467614"),
+        "appId": os.environ.get("FIREBASE_APP_ID", "1:891217467614:web:6ad4f33a5c673377ce8a4f"),
+        "measurementId": os.environ.get("FIREBASE_MEASUREMENT_ID", "G-7MWV39LVTP")
     }
     SESSION_COOKIE_NAME = 'nexusedu_session'
     SESSION_COOKIE_HTTPONLY = True
