@@ -84,7 +84,7 @@ def fetch_leetcode_stats(username: str):
     For built-in demo showcase profiles, returns showcase data.
     For real user handles, queries the live LeetCode API.
     """
-    username = (username or "").strip()
+    username = (username or "").strip().lstrip("@").strip()
     if not username:
         return _get_empty_leetcode_profile()
 

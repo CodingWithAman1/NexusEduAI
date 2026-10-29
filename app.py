@@ -398,30 +398,36 @@ def verify_handle():
     if platform == 'leetcode':
         stats = fetch_leetcode_stats(username)
         is_live = (stats.get('source') == 'live')
+        is_valid = not stats.get('notFound', False) and (is_live or stats.get('connected') or stats.get('totalSolved', 0) >= 0)
+        if stats.get('notFound'):
+            is_valid = False
         return jsonify({
-            'valid': is_live or stats.get('totalSolved', 0) > 0,
-            'isLive': is_live,
+            'valid': is_valid,
+            'isLive': is_live or stats.get('connected', False),
             'source': stats.get('source'),
             'platform': 'leetcode',
             'username': username,
-            'totalSolved': stats['totalSolved'],
-            'acceptanceRate': stats['acceptanceRate'],
-            'ranking': stats['ranking']
+            'totalSolved': stats.get('totalSolved', 0),
+            'acceptanceRate': stats.get('acceptanceRate', 0),
+            'ranking': stats.get('ranking', 0)
         })
     elif platform == 'github':
         stats = fetch_github_stats(username)
-        is_live = (stats.get('source') == 'live')
+        is_live = (stats.get('source') in ['live', 'showcase'])
+        is_valid = not stats.get('notFound', False) and (stats.get('connected') or is_live or stats.get('publicRepos', 0) >= 0)
+        if stats.get('notFound'):
+            is_valid = False
         return jsonify({
-            'valid': is_live or (stats.get('publicRepos', 0) > 0) or (stats.get('source') == 'showcase'),
-            'isLive': is_live,
+            'valid': is_valid,
+            'isLive': is_live or stats.get('connected', False),
             'source': stats.get('source'),
             'platform': 'github',
             'username': username,
-            'name': stats.get('name'),
-            'publicRepos': stats['publicRepos'],
-            'stars': stats['totalStars'],
-            'commits': stats['totalCommitsYear'],
-            'avatar': stats['avatarUrl']
+            'name': stats.get('name') or username,
+            'publicRepos': stats.get('publicRepos', 0),
+            'stars': stats.get('totalStars', 0),
+            'commits': stats.get('totalCommitsYear', 0),
+            'avatar': stats.get('avatarUrl')
         })
     return jsonify({'valid': False, 'message': 'Invalid platform'}), 400
 

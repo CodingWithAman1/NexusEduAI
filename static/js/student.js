@@ -1495,7 +1495,8 @@ async function verifyHandle(platform) {
         return;
     }
 
-    const username = inputEl.value.trim();
+    const username = inputEl.value.trim().replace(/^@+/, '').trim();
+    inputEl.value = username;
     if (badgeEl) {
         badgeEl.innerText = "Verifying...";
         badgeEl.className = "text-[10px] text-amber-400 font-mono animate-pulse";
@@ -1552,8 +1553,8 @@ async function handleConnectAccountsSubmit(e) {
     const ghInput = document.getElementById('connect-gh-input');
     const submitBtn = document.getElementById('save-connect-btn');
 
-    const lcUser = lcInput ? lcInput.value.trim() : '';
-    const ghUser = ghInput ? ghInput.value.trim() : '';
+    const lcUser = lcInput ? lcInput.value.trim().replace(/^@+/, '').trim() : '';
+    const ghUser = ghInput ? ghInput.value.trim().replace(/^@+/, '').trim() : '';
 
     if (!lcUser && !ghUser) {
         showToast("Please enter at least one username.", "error");
