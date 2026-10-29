@@ -1,3 +1,112 @@
+// ==================== FORMAT AI CHAT MARKDOWN & MATH ====================
+function formatAIChatMessage(text) {
+    if (!text) return '';
+
+    // 1. Convert LaTeX math expressions
+    let formatted = text
+        .replace(/\\\(O\(N\s*\\log\s*N\)\\\)/gi, '<code class="px-1.5 py-0.5 rounded bg-cyan-950/60 border border-cyan-500/30 text-cyan-300 font-mono text-[11px] font-bold">O(N log N)</code>')
+        .replace(/\\\(O\(1\)\\\)/gi, '<code class="px-1.5 py-0.5 rounded bg-cyan-950/60 border border-cyan-500/30 text-cyan-300 font-mono text-[11px] font-bold">O(1)</code>')
+        .replace(/\\\(O\(N\)\\\)/gi, '<code class="px-1.5 py-0.5 rounded bg-cyan-950/60 border border-cyan-500/30 text-cyan-300 font-mono text-[11px] font-bold">O(N)</code>')
+        .replace(/\\\(O\(N\^2\)\\\)/gi, '<code class="px-1.5 py-0.5 rounded bg-cyan-950/60 border border-cyan-500/30 text-cyan-300 font-mono text-[11px] font-bold">O(N²)</code>')
+        .replace(/\\\(O\(2\^N\)\\\)/gi, '<code class="px-1.5 py-0.5 rounded bg-rose-950/60 border border-rose-500/30 text-rose-300 font-mono text-[11px] font-bold">O(2ᴺ)</code>')
+        .replace(/\\\(N\s*\\le\s*10\^5\\\)/gi, '<code class="px-1.5 py-0.5 rounded bg-indigo-950/60 border border-indigo-500/30 text-indigo-300 font-mono text-[11px]">N ≤ 10⁵</code>')
+        .replace(/\\\((.*?)\\\)/g, (match, formula) => {
+            let clean = formula
+                .replace(/\\le/g, '≤')
+                .replace(/\\ge/g, '≥')
+                .replace(/\\times/g, '×')
+                .replace(/\\log/g, 'log')
+                .replace(/\\cdot/g, '·')
+                .replace(/\\in/g, '∈')
+                .replace(/\\|V\\|/g, '|V|')
+                .replace(/\\|E\\|/g, '|E|');
+            return '<code class="px-1.5 py-0.5 rounded bg-cyan-950/60 border border-cyan-500/30 text-cyan-300 font-mono text-[11px] font-semibold">' + clean + '</code>';
+        });
+
+    // 2. Format headers
+    formatted = formatted.replace(/^### (.*$)/gim, '<h4 class="text-sm font-extrabold text-indigo-300 mt-2.5 mb-1.5 pb-1 border-b border-white/10">$1</h4>');
+    formatted = formatted.replace(/^## (.*$)/gim, '<h3 class="text-base font-extrabold text-white mt-3 mb-2">$1</h3>');
+
+    // 3. Format code blocks
+    formatted = formatted.replace(/```(?:python|javascript|cpp|go|sql)?([\s\S]*?)```/gi, '<pre class="p-3 my-2 rounded-xl bg-slate-950/90 border border-indigo-500/30 text-indigo-200 font-mono text-[11px] overflow-x-auto whitespace-pre"><code>$1</code></pre>');
+
+    // 4. Format inline code `code`
+    formatted = formatted.replace(/`([^`]+)`/g, '<code class="px-1.5 py-0.5 rounded bg-slate-800 text-amber-300 font-mono text-[11px] border border-white/10">$1</code>');
+
+    // 5. Format **bold**
+    formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-white">$1</strong>');
+
+    // 6. Format *italic*
+    formatted = formatted.replace(/\*([^\*\n]+)\*/g, '<em class="text-indigo-200/90 italic">$1</em>');
+
+    // 7. Format bullet points
+    formatted = formatted.replace(/^[•\-\*]\s+(.*$)/gim, '<div class="flex items-start gap-2 my-1 pl-1"><span class="text-indigo-400 font-bold shrink-0 mt-0.5">▸</span><div class="leading-relaxed">$1</div></div>');
+
+    // 8. Convert remaining newlines
+    formatted = formatted.replace(/\n\n+/g, '<div class="h-2"></div>');
+    formatted = formatted.replace(/\n/g, '<br>');
+
+    return formatted;
+}
+
+function openGeminiKeyModal() {
+    const modal = document.getElementById('gemini-key-modal');
+    if (modal) modal.classList.remove('hidden');
+}
+
+function closeGeminiKeyModal() {
+    const modal = document.getElementById('gemini-key-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
+async function handleSaveGeminiKey(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    const input = document.getElementById('gemini-api-key-input');
+    const statusEl = document.getElementById('gemini-key-status');
+    const saveBtn = document.getElementById('save-gemini-key-btn');
+    if (!input || !input.value.trim()) {
+        showToast('Please enter a Gemini API key', 'error');
+        return;
+    }
+    const key = input.value.trim();
+    if (saveBtn) saveBtn.innerText = 'Validating Key with Google...';
+    if (statusEl) {
+        statusEl.classList.remove('hidden');
+        statusEl.innerHTML = '<span class="text-amber-300 animate-pulse font-mono text-[11px]">Contacting Google Gemini API...</span>';
+    }
+
+    try {
+        const resp = await fetch('/api/ai/set-key', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ apiKey: key })
+        });
+        const data = await resp.json();
+        if (data.success) {
+            triggerConfetti();
+            if (statusEl) {
+                statusEl.innerHTML = '<span class="text-emerald-400 font-bold font-mono text-[11px]">✓ ' + data.message + '</span>';
+            }
+            showToast('Google Gemini 2.0 Flash is connected & active!', 'success');
+            const badge = document.getElementById('gemini-copilot-badge');
+            if (badge) {
+                badge.innerText = '⚡ Gemini 2.0 Flash (Live)';
+                badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 glow-primary';
+            }
+            setTimeout(() => closeGeminiKeyModal(), 1200);
+        } else {
+            if (statusEl) {
+                statusEl.innerHTML = '<span class="text-rose-400 font-mono text-[11px]">' + (data.message || 'Key rejected by Google') + '</span>';
+            }
+            showToast(data.message || 'Failed to validate key', 'error');
+        }
+    } catch (err) {
+        if (statusEl) statusEl.innerHTML = '<span class="text-rose-400 font-mono text-[11px]">Connection error</span>';
+    } finally {
+        if (saveBtn) saveBtn.innerText = 'Validate & Connect Key';
+    }
+}
+
 /**
  * Student Dashboard Core Logic - Pitch Ready Upgrades
  * Unified Dual Activity Matrix (LeetCode + GitHub in ONE), Badges & Assignments
@@ -1332,8 +1441,8 @@ async function handleSendAIChat() {
 
         chatWindow.innerHTML += `
             <div class="flex justify-start mb-3">
-                <div class="max-w-[85%] rounded-xl px-4 py-3 bg-slate-900 border border-indigo-500/30 text-slate-200 text-xs leading-relaxed whitespace-pre-line shadow-lg">
-                    ${data.reply}
+                <div class="max-w-[85%] rounded-xl px-4 py-3 bg-slate-900 border border-indigo-500/30 text-slate-200 text-xs leading-relaxed shadow-lg">
+                    ${formatAIChatMessage(data.reply)}
                     ${actionBtn}
                 </div>
             </div>

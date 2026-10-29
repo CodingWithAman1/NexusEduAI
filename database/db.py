@@ -27,6 +27,8 @@ def init_db():
         cur.execute("ALTER TABLE users ADD COLUMN last_streak_claim TEXT")
     if 'section' not in user_cols:
         cur.execute("ALTER TABLE users ADD COLUMN section TEXT DEFAULT 'Section A'")
+    if 'gemini_api_key' not in user_cols:
+        cur.execute("ALTER TABLE users ADD COLUMN gemini_api_key TEXT DEFAULT NULL")
 
     # Ensure demo accounts have valid password hashes (password123) for local login
     from werkzeug.security import generate_password_hash

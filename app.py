@@ -17,7 +17,8 @@ from services.leetcode_service import fetch_leetcode_stats
 from services.github_service import fetch_github_stats
 from services.ai_service import (
     generate_ai_analysis, get_assignment_ai_guidance, process_ai_chat_query,
-    play_ai_code_arena, play_ai_mock_interview, generate_assignment_ai, evaluate_submission_with_ai
+    play_ai_code_arena, play_ai_mock_interview, generate_assignment_ai, evaluate_submission_with_ai,
+    test_gemini_key
 )
 from services.gamification_service import (
     calculate_level_progress, award_activity_reward,
@@ -1214,6 +1215,48 @@ def ai_chat():
 
     reply_data = process_ai_chat_query(message, user)
     return jsonify(reply_data)
+
+@app.route('/api/ai/set-key', methods=['POST'])
+@login_required
+def set_gemini_api_key():
+    user = get_current_user()
+    data = request.json or {}
+    api_key = (data.get('apiKey') or '').strip()
+
+    if not api_key:
+        return jsonify({'success': False, 'message': 'API key cannot be empty.'}), 400
+
+    valid, message = test_gemini_key(api_key)
+    if not valid:
+        return jsonify({'success': False, 'message': f'Validation failed: {message}'}), 400
+
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute('UPDATE users SET gemini_api_key = ? WHERE id = ?', (api_key, user['id']))
+    conn.commit()
+    conn.close()
+
+    session['gemini_api_key'] = api_key
+    return jsonify({
+        'success': True,
+        'message': 'Google Gemini 2.0 Flash is successfully connected and active!'
+    })
+
+@app.route('/api/ai/status', methods=['GET'])
+@login_required
+def get_ai_status():
+    user = get_current_user() or {}
+    has_key = bool(
+        user.get('gemini_api_key') or
+        session.get('gemini_api_key') or
+        getattr(Config, 'GEMINI_API_KEY', None) or
+        os.environ.get('GEMINI_API_KEY') or
+        os.environ.get('GOOGLE_API_KEY')
+    )
+    return jsonify({
+        'connected': has_key,
+        'model': 'Google Gemini 2.0 Flash (Live API)' if has_key else 'Nexus AI Reasoning Engine'
+    })
 
 @app.route('/api/ai/assignment-helper', methods=['POST'])
 @login_required

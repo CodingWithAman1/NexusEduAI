@@ -4,27 +4,30 @@ import json
 import re
 from config import Config
 
-def call_gemini(prompt: str, system_instruction: str = None) -> str:
+def call_gemini(prompt: str, system_instruction: str = None, user_key: str = None) -> str:
     """
     Invokes Google Gemini API using the official google-genai SDK
-    with fast fallback across available production models.
+    with fast fallback across candidate models and resilient direct REST API fallback.
     """
     api_key = (
+        user_key or
         getattr(Config, 'GEMINI_API_KEY', None) or 
         os.environ.get("GEMINI_API_KEY") or 
         os.environ.get("GOOGLE_API_KEY")
     )
-    if not api_key:
+    if not api_key or not str(api_key).strip():
         return None
 
+    clean_key = str(api_key).strip()
+
+    # 1. Attempt official google-genai SDK
     try:
         from google import genai
-        client = genai.Client(api_key=api_key)
+        client = genai.Client(api_key=clean_key)
         
         candidate_models = [
             'gemini-2.0-flash',
-            'gemini-1.5-flash',
-            'gemini-1.5-pro'
+            'gemini-1.5-flash'
         ]
         
         for model_name in candidate_models:
@@ -42,9 +45,54 @@ def call_gemini(prompt: str, system_instruction: str = None) -> str:
                     return resp.text.strip()
             except Exception:
                 continue
-    except Exception as e:
-        print(f"Gemini client notice: {e}")
+    except Exception:
+        pass
+
+    # 2. Resilient Direct Google Gemini REST API Fallback
+    try:
+        import requests
+        rest_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={clean_key}"
+        payload = {
+            "contents": [{"parts": [{"text": prompt}]}]
+        }
+        if system_instruction:
+            payload["systemInstruction"] = {"parts": [{"text": system_instruction}]}
+
+        r = requests.post(rest_url, json=payload, headers={"Content-Type": "application/json"}, timeout=14)
+        if r.status_code == 200:
+            data = r.json()
+            candidates = data.get("candidates", [])
+            if candidates:
+                parts = candidates[0].get("content", {}).get("parts", [])
+                if parts and "text" in parts[0]:
+                    return parts[0]["text"].strip()
+        else:
+            print(f"Gemini REST notice status {r.status_code}")
+    except Exception as rest_err:
+        print(f"Gemini REST error: {rest_err}")
+
     return None
+
+def test_gemini_key(api_key: str):
+    """Tests a Gemini API key with a fast verification ping"""
+    if not api_key:
+        return False, "API key cannot be empty."
+    
+    clean_key = str(api_key).strip()
+    try:
+        import requests
+        rest_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={clean_key}"
+        payload = {
+            "contents": [{"parts": [{"text": "Respond with: 'Connected'"}]}]
+        }
+        r = requests.post(rest_url, json=payload, headers={"Content-Type": "application/json"}, timeout=8)
+        if r.status_code == 200:
+            return True, "Google Gemini 2.0 Flash is verified & active!"
+        else:
+            err_msg = r.json().get("error", {}).get("message", "Google Gemini API rejected this key.")
+            return False, err_msg
+    except Exception as e:
+        return False, f"Connection error: {str(e)}"
 
 def generate_ai_analysis(user_profile, leetcode_stats, github_stats, assignments, submissions):
     """
@@ -229,7 +277,8 @@ def process_ai_chat_query(message: str, user_context: dict):
         f"At the very end of your response, output a single line: 'SuggestedAction: <2-4 word next action>'."
     )
 
-    gemini_reply = call_gemini(message_clean, system_instruction=system_instruction)
+    user_key = user_context.get('gemini_api_key')
+    gemini_reply = call_gemini(message_clean, system_instruction=system_instruction, user_key=user_key)
     if gemini_reply:
         suggested_action = "Review Next Step"
         clean_reply = gemini_reply
@@ -241,7 +290,7 @@ def process_ai_chat_query(message: str, user_context: dict):
         return {
             "reply": clean_reply,
             "suggestedAction": suggested_action,
-            "engine": "Google Gemini (gemini-2.0-flash)"
+            "engine": "Google Gemini 2.0 Flash (Live)"
         }
 
     # Rich Domain-Aware Algorithmic Intelligence Fallback
@@ -432,10 +481,10 @@ def process_ai_chat_query(message: str, user_context: dict):
         return {
             "reply": (
                 f"### 💡 Nexus AI Insights on: \"{message_clean}\"\n\n"
-                f"Hello {display_name}! Here is a structured technical breakdown regarding your query:\n\n"
-                "• **Algorithmic Context**: When approaching this problem, first identify the underlying state model, input constraints (e.g., \\(N \\le 10^5\\) requires \\(O(N \\log N)\\) or better), and edge conditions.\n"
-                "• **Optimal Data Structures**: Consider using a **Hash Map / Set** for \\(O(1)\\) lookups, a **Min/Max-Heap** for dynamic ranking, or **Two Pointers** if the input is sorted or can be ordered.\n"
-                f"• **Career Alignment**: For {target_company} technical rounds, always state your assumptions, outline brute force vs. optimal Big-O trade-offs, and test your code against empty/boundary inputs.\n\n"
+                f"Hello **{display_name}**! Here is a technical breakdown for your query:\n\n"
+                "• **Algorithmic Context**: When approaching this problem, first identify the underlying state model, input constraints (e.g., `N ≤ 10⁵` requires an `O(N log N)` or better strategy), and edge conditions.\n"
+                "• **Optimal Data Structures**: Consider using a **Hash Map / Set** for `O(1)` amortized lookups, a **Min/Max-Heap** for dynamic ranking, or **Two Pointers** if the input is sorted or can be ordered.\n"
+                f"• **Career Alignment**: For **{target_company}** technical rounds, always state your assumptions, outline brute force vs. optimal Big-O trade-offs, and test your code against empty/boundary inputs.\n\n"
                 "💡 *Feel free to ask for a specific code template, a step-by-step invariant breakdown, or practice in the interactive arena below!*"
             ),
             "suggestedAction": "Practice in Arena"
