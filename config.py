@@ -32,15 +32,15 @@ class Config:
     # Official Google Gemini API Key for Multimodal AI Diagnostics & Copilot
     GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
     
-    # Official Firebase client configuration from user
+    # Official Firebase client configuration with production defaults
     FIREBASE_CONFIG = {
-        "apiKey": os.environ.get("FIREBASE_API_KEY"),
-        "authDomain": os.environ.get("FIREBASE_AUTH_DOMAIN"),
-        "projectId": os.environ.get("FIREBASE_PROJECT_ID"),
-        "storageBucket": os.environ.get("FIREBASE_STORAGE_BUCKET"),
-        "messagingSenderId": os.environ.get("FIREBASE_MESSAGING_SENDER_ID"),
-        "appId": os.environ.get("FIREBASE_APP_ID"),
-        "measurementId": os.environ.get("FIREBASE_MEASUREMENT_ID")
+        "apiKey": os.environ.get("FIREBASE_API_KEY", "AIzaSyDEzSmkRfXfFdlgnghz6QtuuoAwPsLYu3g"),
+        "authDomain": os.environ.get("FIREBASE_AUTH_DOMAIN", "brandbuildai-2749e.firebaseapp.com"),
+        "projectId": os.environ.get("FIREBASE_PROJECT_ID", "brandbuildai-2749e"),
+        "storageBucket": os.environ.get("FIREBASE_STORAGE_BUCKET", "brandbuildai-2749e.firebasestorage.app"),
+        "messagingSenderId": os.environ.get("FIREBASE_MESSAGING_SENDER_ID", "1063131223920"),
+        "appId": os.environ.get("FIREBASE_APP_ID", "1:1063131223920:web:bc9ae6675e2a62f8c4e1b5"),
+        "measurementId": os.environ.get("FIREBASE_MEASUREMENT_ID", "G-PZ59QGRJPH")
     }
     SESSION_COOKIE_NAME = 'nexusedu_session'
     SESSION_COOKIE_HTTPONLY = True

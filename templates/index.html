@@ -726,17 +726,16 @@
 
             </div>
 
-            <!-- ==================== TAB 4: ASSIGNMENTS & COURSE MATERIALS ==================== -->
-            <div id="tab-view-assignments" class="tab-view-content hidden space-y-8">
+            <!-- ==================== TAB 4: ASSIGNMENTS ==================== -->
+            <div id="tab-view-assignments" class="tab-view-content hidden space-y-6">
                 
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                        <h2 class="text-2xl font-extrabold text-white">College Coursework & Study Hub</h2>
-                        <p class="text-xs text-slate-400">Download faculty study materials, submit assignments, track grading feedback, and earn XP</p>
+                        <h2 class="text-2xl font-extrabold text-white">College Coursework & Assignments</h2>
+                        <p class="text-xs text-slate-400">Track deadlines, submit solutions, and receive instant AI assessment feedback</p>
                     </div>
                 </div>
 
-                <!-- Section 1: Active Coursework Assignments -->
                 <div class="space-y-4">
                     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                         <div>
@@ -753,27 +752,13 @@
                                 <select id="assignment-status-filter" onchange="renderAssignmentsList()" class="bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-400">
                                     <option value="all">All work</option>
                                     <option value="pending">Needs submission</option>
-                                    <option value="submitted">Awaiting grade</option>
+                                    <option value="completed">Completed (AI Assessed)</option>
                                     <option value="graded">Graded</option>
                                 </select>
                             </label>
                         </div>
                     </div>
                     <div id="assignments-list" class="space-y-4"></div>
-                </div>
-
-                <!-- Section 2: Campus Course Materials & Resource Hub -->
-                <div class="pt-6 border-t border-white/10 space-y-4">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <h3 class="text-base font-bold text-white flex items-center gap-2">
-                                <span>📚 Course Materials & Faculty Resources</span>
-                                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Free Downloads</span>
-                            </h3>
-                            <p class="text-xs text-slate-400">Lecture slides, starter code zips, problem sheets, and reference docs shared by faculty</p>
-                        </div>
-                    </div>
-                    <div id="materials-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
                 </div>
 
             </div>
@@ -1468,9 +1453,9 @@
     <div id="nexus-heatmap-tooltip" class="fixed pointer-events-none z-[99999] opacity-0 transition-opacity duration-150 px-3 py-2 bg-slate-950/95 backdrop-blur-md border border-white/20 text-xs text-white rounded-xl shadow-2xl max-w-xs whitespace-nowrap"></div>
 
     <!-- JavaScript Modules -->
-    <script src="/static/js/firebase-config.js"></script>
+    <script src="/static/js/firebase-config.js?v=2.2"></script>
     <script src="/static/js/gamification.js"></script>
-    <script src="/static/js/student.js?v=2.4"></script>
+    <script src="/static/js/student.js?v=2.5"></script>
     <script src="/static/js/app.js"></script>
 </body>
 </html>

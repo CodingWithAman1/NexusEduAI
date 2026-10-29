@@ -96,13 +96,16 @@ async function handleFirebaseGoogleLogin() {
         }
     } catch (error) {
         console.error("Google Sign-In Error:", error);
-        if (error.code === 'auth/unauthorized-domain') {
+        const errCode = error.code || '';
+        const errMsg = error.message || '';
+        if (errCode === 'auth/unauthorized-domain' || errMsg.includes('auth/unauthorized-domain')) {
             showFirebaseDomainHelperModal();
-        } else if (error.code === 'auth/operation-not-allowed') {
+        } else if (errCode === 'auth/operation-not-allowed' || errMsg.includes('auth/operation-not-allowed')) {
             showToast("Google sign-in is disabled in your Firebase console. Enable it under Authentication > Sign-in method.", "error");
-        } else if (error.code === 'auth/internal-error') {
-            showToast("Firebase internal error. Please ensure popups and cookies are allowed, or sign in directly with Email & Password below.", "error");
-        } else if (error.code === 'auth/popup-closed-by-user') {
+        } else if (errCode === 'auth/internal-error' || errMsg.includes('auth/internal-error')) {
+            showToast("Firebase internal error: Domain not authorized in Firebase or third-party cookies blocked.", "error");
+            showFirebaseDomainHelperModal();
+        } else if (errCode === 'auth/popup-closed-by-user' || errMsg.includes('auth/popup-closed-by-user')) {
             showToast("Google sign-in was closed before completing.", "info");
         } else {
             showToast(error.message || "Failed to sign in with Google", "error");
@@ -110,15 +113,16 @@ async function handleFirebaseGoogleLogin() {
     }
 }
 
-// Modal helper when Firebase rejects OAuth domain (e.g. 127.0.0.1 vs localhost)
+// Modal helper when Firebase rejects OAuth domain
 function showFirebaseDomainHelperModal() {
     let existing = document.getElementById('firebase-domain-helper-modal');
     if (existing) existing.remove();
 
     const currentHost = window.location.hostname;
     const currentPort = window.location.port ? `:${window.location.port}` : '';
+    const isCloudHost = currentHost !== 'localhost' && currentHost !== '127.0.0.1';
     const localhostUrl = `http://localhost${currentPort}${window.location.pathname}${window.location.search}`;
-    const projectId = (window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.projectId) ? window.FIREBASE_CONFIG.projectId : 'ai-student-dashboard-3fa4a';
+    const projectId = (window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.projectId) ? window.FIREBASE_CONFIG.projectId : 'brandbuildai-2749e';
 
     const modal = document.createElement('div');
     modal.id = 'firebase-domain-helper-modal';
@@ -137,10 +141,32 @@ function showFirebaseDomainHelperModal() {
             </div>
             
             <p class="text-xs text-slate-300 mb-4 leading-relaxed">
-                Firebase Google Sign-In blocked OAuth because <strong class="text-white font-mono bg-slate-900 px-1.5 py-0.5 rounded border border-white/10">${currentHost}</strong> is not listed under Authorized Domains in your Firebase project (<span class="text-cyan-400 font-mono">${projectId}</span>).
+                Firebase Google Sign-In blocked OAuth because <strong class="text-white font-mono bg-slate-900 px-1.5 py-0.5 rounded border border-white/10">${currentHost}</strong> is not listed under Authorized Domains in your Firebase project (<span class="text-cyan-400 font-mono font-bold">${projectId}</span>).
             </p>
 
             <div class="space-y-3 text-xs mb-5">
+                ${isCloudHost ? `
+                <div class="p-3.5 rounded-xl bg-slate-900/90 border border-emerald-500/30">
+                    <div class="flex items-center justify-between mb-1.5">
+                        <span class="font-bold text-emerald-400">⚡ Permanent Fix: Add Domain in Firebase (30s)</span>
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300">Recommended</span>
+                    </div>
+                    <ol class="text-slate-300 text-[11px] mb-3 space-y-1 list-decimal list-inside">
+                        <li>Open Firebase Console Settings below</li>
+                        <li>Scroll down to <strong class="text-white">Authorized domains</strong></li>
+                        <li>Click <strong class="text-white">Add domain</strong> and enter: <code class="text-amber-300 font-mono font-bold select-all bg-slate-950 px-1.5 py-0.5 rounded">${currentHost}</code></li>
+                    </ol>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <a href="https://console.firebase.google.com/project/${projectId}/authentication/settings" target="_blank" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-xs shadow-md transition-all">
+                            <span>Open Firebase Console Settings</span>
+                            <span>↗</span>
+                        </a>
+                        <button type="button" onclick="navigator.clipboard.writeText('${currentHost}'); this.innerText='✓ Domain Copied!';" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/30 font-bold text-xs transition-colors">
+                            📋 Copy "${currentHost}"
+                        </button>
+                    </div>
+                </div>
+                ` : `
                 <div class="p-3.5 rounded-xl bg-slate-900/90 border border-cyan-500/30">
                     <div class="flex items-center justify-between mb-1">
                         <span class="font-bold text-cyan-400">⚡ Solution 1: Switch to localhost (Instant Fix!)</span>
@@ -154,25 +180,21 @@ function showFirebaseDomainHelperModal() {
                         <span>→</span>
                     </a>
                 </div>
+                `}
 
                 <div class="p-3.5 rounded-xl bg-slate-900/90 border border-indigo-500/30">
-                    <span class="font-bold text-indigo-300 block mb-1">🛠️ Solution 2: Add 127.0.0.1 to Firebase Console</span>
-                    <p class="text-slate-400 text-[11px] mb-2">
-                        1. Open Firebase Console &gt; Authentication &gt; Settings &gt; Authorized domains<br>
-                        2. Click "Add domain" and type <strong>127.0.0.1</strong><br>
-                        3. Make sure Google Sign-in provider is enabled under Sign-in method.
+                    <span class="font-bold text-indigo-300 block mb-1">✨ Solution 2: Sign In with Email &amp; Password (Instant)</span>
+                    <p class="text-slate-400 text-[11px] leading-relaxed mb-2">
+                        You can sign in immediately without Google OAuth domain whitelisting. Email authentication runs on your cloud server:
                     </p>
-                    <a href="https://console.firebase.google.com/project/${projectId}/authentication/settings" target="_blank" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-indigo-500/30 font-bold text-[11px] transition-colors">
-                        <span>Open Firebase Console Settings</span>
-                        <span>↗</span>
-                    </a>
-                </div>
-
-                <div class="p-3.5 rounded-xl bg-slate-900/90 border border-emerald-500/30">
-                    <span class="font-bold text-emerald-400 block mb-1">✨ Solution 3: Use Email & Password or Local Demo</span>
-                    <p class="text-slate-400 text-[11px]">
-                        Email/Password sign-up and sign-in work locally without needing OAuth domain authorization.
-                    </p>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <button type="button" onclick="document.getElementById('firebase-domain-helper-modal').remove(); const e=document.getElementById('login-email'); const p=document.getElementById('login-password'); if(e&&p){e.value='funwithcode8630@gmail.com';p.value='password123';}" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 font-bold text-[11px]">
+                            🎓 Student: funwithcode8630@gmail.com
+                        </button>
+                        <button type="button" onclick="document.getElementById('firebase-domain-helper-modal').remove(); const e=document.getElementById('login-email'); const p=document.getElementById('login-password'); if(e&&p){e.value='faculty@12345';p.value='password123';}" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-purple-300 border border-purple-500/30 font-bold text-[11px]">
+                            🏫 Faculty: faculty@12345
+                        </button>
+                    </div>
                 </div>
             </div>
 
