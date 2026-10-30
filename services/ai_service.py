@@ -86,9 +86,14 @@ def call_gemini(prompt: str, system_instruction: str = None, user_key: str = Non
         client = genai.Client(api_key=clean_key)
         
         candidate_models = [
+            'gemini-flash-lite-latest',
+            'gemini-3.1-flash-lite',
+            'gemini-3.5-flash-lite',
+            'gemini-flash-latest',
+            'gemini-3.8-flash',
+            'gemini-2.5-flash',
             'gemini-2.0-flash',
-            'gemini-1.5-flash',
-            'gemini-1.5-pro'
+            'gemini-1.5-flash'
         ]
         
         for model_name in candidate_models:
@@ -110,7 +115,16 @@ def call_gemini(prompt: str, system_instruction: str = None, user_key: str = Non
         pass
 
     # 2. Resilient Direct Google Gemini REST API Fallback
-    candidate_rest_models = ['gemini-2.0-flash', 'gemini-1.5-flash']
+    candidate_rest_models = [
+        'gemini-flash-lite-latest',
+        'gemini-3.1-flash-lite',
+        'gemini-3.5-flash-lite',
+        'gemini-flash-latest',
+        'gemini-3.8-flash',
+        'gemini-2.5-flash',
+        'gemini-2.0-flash',
+        'gemini-1.5-flash'
+    ]
     for m in candidate_rest_models:
         try:
             import requests
@@ -121,7 +135,7 @@ def call_gemini(prompt: str, system_instruction: str = None, user_key: str = Non
             if system_instruction:
                 payload["systemInstruction"] = {"parts": [{"text": system_instruction}]}
 
-            r = requests.post(rest_url, json=payload, headers={"Content-Type": "application/json"}, timeout=14)
+            r = requests.post(rest_url, json=payload, headers={"Content-Type": "application/json"}, timeout=12)
             if r.status_code == 200:
                 data = r.json()
                 candidates = data.get("candidates", [])
@@ -142,7 +156,15 @@ def test_gemini_key(api_key: str):
         return False, "API key cannot be empty."
     
     clean_key = str(api_key).strip()
-    candidate_models = ['gemini-2.0-flash', 'gemini-1.5-flash']
+    candidate_models = [
+        'gemini-flash-lite-latest',
+        'gemini-3.1-flash-lite',
+        'gemini-3.5-flash-lite',
+        'gemini-flash-latest',
+        'gemini-3.8-flash',
+        'gemini-2.0-flash',
+        'gemini-1.5-flash'
+    ]
     last_err = "Google Gemini API rejected this key."
 
     for model_name in candidate_models:
@@ -152,7 +174,7 @@ def test_gemini_key(api_key: str):
             payload = {
                 "contents": [{"parts": [{"text": "Respond with: 'Connected'"}]}]
             }
-            r = requests.post(rest_url, json=payload, headers={"Content-Type": "application/json"}, timeout=8)
+            r = requests.post(rest_url, json=payload, headers={"Content-Type": "application/json"}, timeout=6)
             if r.status_code == 200:
                 return True, f"Google Gemini ({model_name}) is verified & active!"
             else:
