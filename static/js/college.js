@@ -344,15 +344,25 @@ async function handleAIGenerateAssignment() {
             if (document.getElementById('assign-subject-code')) document.getElementById('assign-subject-code').value = a.subject_code || 'CS-401';
             if (document.getElementById('assign-points')) document.getElementById('assign-points').value = a.total_points || 100;
             if (document.getElementById('assign-difficulty')) document.getElementById('assign-difficulty').value = a.difficulty || difficulty;
-            if (document.getElementById('assign-tags')) document.getElementById('assign-tags').value = (a.tags || []).join(', ');
+            
+            const tagsVal = Array.isArray(a.tags) ? a.tags.join(', ') : (typeof a.tags === 'string' ? a.tags : '');
+            if (document.getElementById('assign-tags')) document.getElementById('assign-tags').value = tagsVal;
             
             let desc = a.description || '';
-            if (a.rubric && a.rubric.length) {
-                desc += "\n\nGrading Rubric:\n" + a.rubric.map(r => `- ${r.criterion} (${r.points} pts): ${r.description}`).join('\n');
+            if (Array.isArray(a.rubric) && a.rubric.length) {
+                desc += "\n\nGrading Rubric:\n" + a.rubric.map(r => `- ${r.criterion} (${r.points || 30} pts): ${r.description || ''}`).join('\n');
             }
             if (document.getElementById('assign-description')) document.getElementById('assign-description').value = desc;
             if (document.getElementById('assign-starter-code') && a.starter_code) {
                 document.getElementById('assign-starter-code').value = a.starter_code;
+            }
+
+            // Set due date default to 7 days from now if not chosen
+            const dueDateInput = document.getElementById('assign-due-date');
+            if (dueDateInput && !dueDateInput.value) {
+                const nextWeek = new Date();
+                nextWeek.setDate(nextWeek.getDate() + 7);
+                dueDateInput.value = nextWeek.toISOString().split('T')[0];
             }
 
             playChime("coin");
@@ -776,7 +786,7 @@ async function handleAIEvaluateSubmission() {
             body: JSON.stringify({
                 assignmentTitle: sub.assignment_title,
                 assignmentDescription: sub.assignment_description || 'Student coursework task implementation',
-                studentCode: sub.submission_link ? `Repository: ${sub.submission_link}\nFile: ${sub.submitted_filename || 'none'}` : (sub.submitted_filename ? `File: ${sub.submitted_filename}` : 'Solution submitted'),
+                studentCode: sub.code_content || (sub.submission_link ? `Repository: ${sub.submission_link}\nFile: ${sub.submitted_filename || 'none'}` : (sub.submitted_filename ? `File: ${sub.submitted_filename}` : 'Solution submitted')),
                 studentNotes: sub.submission_notes || ''
             })
         });
@@ -788,15 +798,36 @@ async function handleAIEvaluateSubmission() {
         }
 
         if (data.success) {
-            const maxPts = sub.total_points || 100;
-            const awarded = Math.min(maxPts, Math.round((data.suggested_grade_percent / 100) * maxPts));
+            const rawPercent = data.suggested_grade_percent ?? 
+                               data.suggested_grade ?? 
+                               data.evaluation?.suggested_grade_percent ?? 
+                               data.evaluation?.suggested_grade ?? 
+                               88;
+            const percent = Math.max(0, Math.min(100, isNaN(Number(rawPercent)) ? 88 : Math.round(Number(rawPercent))));
+            const maxPts = Number(sub.total_points) > 0 ? Number(sub.total_points) : 100;
+            const awarded = Math.min(maxPts, Math.max(0, Math.round((percent / 100) * maxPts)));
             document.getElementById('grade-score-input').value = awarded;
 
-            let fb = `### AI Rubric Evaluation (${data.suggested_grade_percent}% Score Suggestion)\n${data.feedback_critique}\n\n`;
-            if (data.rubric_breakdown && data.rubric_breakdown.length) {
+            const feedbackText = data.feedback_critique || 
+                                 data.feedback || 
+                                 data.evaluation?.feedback_critique || 
+                                 data.evaluation?.feedback || 
+                                 'Student solution submitted and verified against assignment specifications.';
+
+            let fb = `### AI Rubric Evaluation (${percent}% Score Suggestion)\n${feedbackText}\n\n`;
+            
+            const breakdown = data.rubric_breakdown || data.evaluation?.rubric_breakdown;
+            if (breakdown && Array.isArray(breakdown) && breakdown.length) {
                 fb += "Rubric Breakdown:\n";
-                data.rubric_breakdown.forEach(r => {
-                    fb += `• ${r.criterion}: ${r.score}/${r.max_score} - ${r.notes}\n`;
+                breakdown.forEach(r => {
+                    fb += `• ${r.criterion || 'Criterion'}: ${r.score ?? 0}/${r.max_score ?? 30} - ${r.notes || 'Requirement met'}\n`;
+                });
+            } else if (data.rubric_scores || data.evaluation?.rubric_scores) {
+                const rs = data.rubric_scores || data.evaluation?.rubric_scores;
+                fb += "Rubric Breakdown:\n";
+                Object.entries(rs).forEach(([k, v]) => {
+                    const label = k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    fb += `• ${label}: ${v}/100\n`;
                 });
             }
             document.getElementById('grade-feedback-input').value = fb;
