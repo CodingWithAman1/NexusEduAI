@@ -18,17 +18,29 @@ def init_db():
     
     cur = conn.cursor()
 
-    # Column migrations for existing databases to support Class Sections
+    # Column migrations for existing databases to support Class Sections (defensively guarded against concurrent worker races)
     cur.execute("PRAGMA table_info(users)")
     user_cols = [r[1] for r in cur.fetchall()]
     if 'password_hash' not in user_cols:
-        cur.execute("ALTER TABLE users ADD COLUMN password_hash TEXT")
+        try:
+            cur.execute("ALTER TABLE users ADD COLUMN password_hash TEXT")
+        except sqlite3.OperationalError:
+            pass
     if 'last_streak_claim' not in user_cols:
-        cur.execute("ALTER TABLE users ADD COLUMN last_streak_claim TEXT")
+        try:
+            cur.execute("ALTER TABLE users ADD COLUMN last_streak_claim TEXT")
+        except sqlite3.OperationalError:
+            pass
     if 'section' not in user_cols:
-        cur.execute("ALTER TABLE users ADD COLUMN section TEXT DEFAULT 'Section A'")
+        try:
+            cur.execute("ALTER TABLE users ADD COLUMN section TEXT DEFAULT 'Section A'")
+        except sqlite3.OperationalError:
+            pass
     if 'gemini_api_key' not in user_cols:
-        cur.execute("ALTER TABLE users ADD COLUMN gemini_api_key TEXT DEFAULT NULL")
+        try:
+            cur.execute("ALTER TABLE users ADD COLUMN gemini_api_key TEXT DEFAULT NULL")
+        except sqlite3.OperationalError:
+            pass
 
     # Ensure demo accounts have valid password hashes (password123) for local login
     from werkzeug.security import generate_password_hash
@@ -40,12 +52,18 @@ def init_db():
     cur.execute("PRAGMA table_info(assignments)")
     assign_cols = [r[1] for r in cur.fetchall()]
     if 'section' not in assign_cols:
-        cur.execute("ALTER TABLE assignments ADD COLUMN section TEXT DEFAULT 'All Sections'")
+        try:
+            cur.execute("ALTER TABLE assignments ADD COLUMN section TEXT DEFAULT 'All Sections'")
+        except sqlite3.OperationalError:
+            pass
 
     cur.execute("PRAGMA table_info(course_materials)")
     mat_cols = [r[1] for r in cur.fetchall()]
     if 'section' not in mat_cols:
-        cur.execute("ALTER TABLE course_materials ADD COLUMN section TEXT DEFAULT 'All Sections'")
+        try:
+            cur.execute("ALTER TABLE course_materials ADD COLUMN section TEXT DEFAULT 'All Sections'")
+        except sqlite3.OperationalError:
+            pass
 
     cur.execute("SELECT COUNT(*) FROM shop_items")
     shop_count = cur.fetchone()[0]
