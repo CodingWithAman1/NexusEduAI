@@ -1,55 +1,59 @@
 import io
 import re
 import html
-from reportlab.lib.pagesizes import letter
-from reportlab.lib import colors
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus import (
-    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable, Preformatted
-)
-from reportlab.pdfgen import canvas
 
-class NumberedCanvas(canvas.Canvas):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._saved_page_states = []
+# Safe conditional import of ReportLab
+try:
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib import colors
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.platypus import (
+        SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable, Preformatted
+    )
+    from reportlab.pdfgen import canvas
+    REPORTLAB_AVAILABLE = True
+except ImportError:
+    REPORTLAB_AVAILABLE = False
 
-    def showPage(self):
-        self._saved_page_states.append(dict(self.__dict__))
-        self._startPage()
 
-    def save(self):
-        num_pages = len(self._saved_page_states)
-        for state in self._saved_page_states:
-            self.__dict__.update(state)
-            self.draw_page_decorations(num_pages)
-            super().showPage()
-        super().save()
+if REPORTLAB_AVAILABLE:
+    class NumberedCanvas(canvas.Canvas):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self._saved_page_states = []
 
-    def draw_page_decorations(self, page_count):
-        self.saveState()
-        self.setFont("Helvetica", 8)
-        self.setFillColor(colors.HexColor("#64748B"))
-        
-        # Header rule & title
-        self.setStrokeColor(colors.HexColor("#CBD5E1"))
-        self.setLineWidth(0.5)
-        self.line(36, 756, 576, 756)
-        self.drawString(36, 762, "NEXUSEDU AI • Department of Computer Science & Engineering")
-        self.drawRightString(576, 762, "Official Coursework Specification")
+        def showPage(self):
+            self._saved_page_states.append(dict(self.__dict__))
+            self._startPage()
 
-        # Footer rule & numbering
-        self.line(36, 42, 576, 42)
-        self.drawString(36, 30, "NexusEdu AI Campus Platform • Verified Academic Document")
-        self.drawRightString(576, 30, f"Page {self._pageNumber} of {page_count}")
-        self.restoreState()
+        def save(self):
+            num_pages = len(self._saved_page_states)
+            for state in self._saved_page_states:
+                self.__dict__.update(state)
+                self.draw_page_decorations(num_pages)
+                super().showPage()
+            super().save()
 
-def generate_assignment_pdf_bytes(assignment: dict) -> bytes:
-    """
-    Renders an official university coursework assignment sheet in PDF format.
-    Includes metadata table, problem specifications, structured rubric,
-    starter scaffold, and integrity guidelines.
-    """
+        def draw_page_decorations(self, page_count):
+            self.saveState()
+            self.setFont("Helvetica", 8)
+            self.setFillColor(colors.HexColor("#64748B"))
+            
+            # Header rule & title
+            self.setStrokeColor(colors.HexColor("#CBD5E1"))
+            self.setLineWidth(0.5)
+            self.line(36, 756, 576, 756)
+            self.drawString(36, 762, "NEXUSEDU AI • Department of Computer Science & Engineering")
+            self.drawRightString(576, 762, "Official Coursework Specification")
+
+            # Footer rule & numbering
+            self.line(36, 42, 576, 42)
+            self.drawString(36, 30, "NexusEdu AI Campus Platform • Verified Academic Document")
+            self.drawRightString(576, 30, f"Page {self._pageNumber} of {page_count}")
+            self.restoreState()
+
+
+def _generate_reportlab_pdf_bytes(assignment: dict) -> bytes:
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
         buffer,
@@ -120,7 +124,7 @@ def generate_assignment_pdf_bytes(assignment: dict) -> bytes:
     elements.append(Paragraph(html.escape(str(raw_title)), title_style))
     elements.append(Spacer(1, 7))
     
-    # Metadata Grid (Course, Code, Section, Due Date, Points, Difficulty, Faculty)
+    # Metadata Grid
     subject = assignment.get('subject', 'Computer Science & Engineering')
     code = assignment.get('subject_code', 'CS-401')
     section = assignment.get('section', 'All Sections')
@@ -168,7 +172,6 @@ def generate_assignment_pdf_bytes(assignment: dict) -> bytes:
     elements.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#4F46E5"), spaceAfter=5))
     
     desc_raw = assignment.get('description', '')
-    # Check if rubric is appended in description
     rubric_match = re.search(r'Grading Rubric:\s*(.*)', desc_raw, re.DOTALL | re.IGNORECASE)
     main_desc = desc_raw[:rubric_match.start()].strip() if rubric_match else desc_raw.strip()
     
@@ -244,7 +247,7 @@ def generate_assignment_pdf_bytes(assignment: dict) -> bytes:
     elements.append(rubric_table)
     elements.append(Spacer(1, 8))
 
-    # 3. Starter Boilerplate Code (if provided)
+    # 3. Starter Boilerplate Code
     starter_code = assignment.get('starter_code') or assignment.get('starterCode') or ''
     starter_code = starter_code.strip()
     if starter_code:
@@ -264,7 +267,7 @@ def generate_assignment_pdf_bytes(assignment: dict) -> bytes:
         elements.append(code_table)
         elements.append(Spacer(1, 8))
 
-    # 4. Submission Instructions & Academic Integrity
+    # 4. Submission Instructions
     elements.append(Paragraph("4. Submission Instructions & AI Integrity Policy", sec_heading))
     elements.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#4F46E5"), spaceAfter=5))
     
@@ -278,3 +281,84 @@ def generate_assignment_pdf_bytes(assignment: dict) -> bytes:
 
     doc.build(elements, canvasmaker=NumberedCanvas)
     return buffer.getvalue()
+
+
+def _generate_pure_pdf_bytes(assignment: dict) -> bytes:
+    """Zero-dependency pure Python PDF generator fallback."""
+    def esc(s):
+        return str(s).replace('\\', '\\\\').replace('(', '\\(').replace(')', '\\)')
+
+    title = assignment.get('title', 'Assignment Specification')
+    subject = assignment.get('subject', 'Computer Science & Engineering')
+    code = assignment.get('subject_code', 'CS-401')
+    section = assignment.get('section', 'All Sections')
+    due_date = assignment.get('due_date') or assignment.get('dueDate', 'Scheduled')
+    points = assignment.get('total_points') or assignment.get('totalPoints', 100)
+    desc = assignment.get('description', '')
+
+    lines = [
+        ('F2', 14, 50, 750, 'NEXUSEDU AI - OFFICIAL ASSIGNMENT SPECIFICATION'),
+        ('F1', 9, 50, 735, 'GL Bajaj Institute of Technology & Management | Session 2026-2027'),
+        ('F2', 12, 50, 705, esc(title[:70])),
+        ('F1', 9, 50, 680, esc(f"Course: {subject} ({code}) | Section: {section}")),
+        ('F1', 9, 50, 665, esc(f"Due Date: {due_date} | Maximum Score: {points} Points")),
+        ('F2', 10, 50, 640, 'Problem Statement & Requirements:'),
+    ]
+
+    y = 622
+    for line in desc.split('\n')[:25]:
+        if line.strip() and y > 80:
+            lines.append(('F1', 8.5, 50, y, esc(line[:95])))
+            y -= 13
+
+    if y > 100:
+        y -= 10
+        lines.append(('F2', 9.5, 50, y, 'Submission & AI Assessment Notice:'))
+        y -= 13
+        lines.append(('F1', 8, 50, y, 'Submit your solution under this designated assignment in NexusEdu AI.'))
+        y -= 11
+        lines.append(('F1', 8, 50, y, 'Submissions are evaluated by Gemini AI against rubrics to mark completion.'))
+
+    stream = ''
+    for font, sz, x, ypos, text in lines:
+        stream += f'BT /{font} {sz} Tf {x} {ypos} Td ({text}) Tj ET\n'
+
+    stream_bytes = stream.encode('latin1', errors='ignore')
+    stream_len = len(stream_bytes)
+
+    obj1 = b'1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n'
+    obj2 = b'2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n'
+    obj3 = b'3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> >>\nendobj\n'
+    obj4 = f'4 0 obj\n<< /Length {stream_len} >>\nstream\n'.encode('ascii') + stream_bytes + b'\nendstream\nendobj\n'
+    obj5 = b'5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n'
+    obj6 = b'6 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>\nendobj\n'
+
+    header = b'%PDF-1.4\n'
+    offsets = [0]
+    pos = len(header)
+    body_data = b''
+    for obj in [obj1, obj2, obj3, obj4, obj5, obj6]:
+        offsets.append(pos)
+        body_data += obj
+        pos += len(obj)
+
+    xref_pos = pos
+    xref = f'xref\n0 7\n0000000000 65535 f \n'.encode('ascii')
+    for off in offsets[1:]:
+        xref += f'{off:010d} 00000 n \n'.encode('ascii')
+    trailer = f'trailer\n<< /Size 7 /Root 1 0 R >>\nstartxref\n{xref_pos}\n%%EOF\n'.encode('ascii')
+
+    return header + body_data + xref + trailer
+
+
+def generate_assignment_pdf_bytes(assignment: dict) -> bytes:
+    """
+    Renders an official university coursework assignment sheet in PDF format.
+    Uses ReportLab when available; otherwise falls back gracefully to a pure-Python PDF generator.
+    """
+    if REPORTLAB_AVAILABLE:
+        try:
+            return _generate_reportlab_pdf_bytes(assignment)
+        except Exception:
+            return _generate_pure_pdf_bytes(assignment)
+    return _generate_pure_pdf_bytes(assignment)
