@@ -1185,12 +1185,48 @@ def api_ai_generate_assignment():
         return jsonify({'error': 'Faculty access required'}), 403
 
     data = request.json or {}
-    topic = data.get('topic', 'Algorithms Problem')
-    subject = data.get('subject', 'Computer Science')
+    prompt_text = data.get('prompt') or data.get('topic') or 'Computer Science Coursework'
+    subject = data.get('subject', 'Computer Science & Engineering')
     difficulty = data.get('difficulty', 'Medium')
+    section = data.get('section', 'All Sections')
+    total_points = int(data.get('totalPoints') or data.get('total_points', 100))
 
-    res = generate_assignment_ai(topic=topic, subject=subject, difficulty=difficulty)
+    res = generate_assignment_ai(prompt=prompt_text, subject=subject, difficulty=difficulty, target_section=section, total_points=total_points)
     return jsonify(res)
+
+@app.route('/api/ai/generate-assignment-pdf', methods=['POST'])
+@faculty_required
+def api_ai_generate_assignment_pdf():
+    user = get_current_user()
+    if not user or user['role'] not in ['faculty', 'admin']:
+        return jsonify({'error': 'Faculty access required'}), 403
+
+    data = request.json or {}
+    prompt_text = data.get('prompt') or data.get('topic') or 'Computer Science Coursework'
+    subject = data.get('subject', 'Computer Science & Engineering')
+    difficulty = data.get('difficulty', 'Medium')
+    section = data.get('section', 'All Sections')
+    total_points = int(data.get('totalPoints') or data.get('total_points', 100))
+
+    res = generate_assignment_ai(prompt=prompt_text, subject=subject, difficulty=difficulty, target_section=section, total_points=total_points)
+    if not res.get('success') or not res.get('assignment'):
+        return jsonify({'error': 'Failed to generate assignment'}), 500
+
+    assign_dict = res['assignment']
+    assign_dict['faculty_name'] = (user.get('display_name') or user.get('name')) if user else 'Faculty In-Charge'
+    if section:
+        assign_dict['section'] = section
+
+    pdf_bytes = generate_assignment_pdf_bytes(assign_dict)
+    raw_title = assign_dict.get('title', 'Assignment')
+    clean_title = re.sub(r'[^\w\-_\. ]', '_', raw_title).strip() or 'Assignment'
+
+    return send_file(
+        io.BytesIO(pdf_bytes),
+        mimetype='application/pdf',
+        as_attachment=True,
+        download_name=f"{clean_title}_Specification.pdf"
+    )
 
 @app.route('/api/ai/evaluate-submission', methods=['POST'])
 @faculty_required

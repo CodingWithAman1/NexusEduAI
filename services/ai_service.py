@@ -1110,32 +1110,804 @@ def play_ai_mock_interview(topic: str, company: str = "Google", candidate_answer
             "coinsBonus": 40 if is_hire else 10
         }
 
-def generate_assignment_ai(topic: str, subject: str = "Computer Science", difficulty: str = "Medium"):
+def format_assignment_description(assignment: dict) -> str:
+    """Synthesizes a structured markdown document from assignment components."""
+    parts = []
+    
+    overview = (assignment.get("overview") or "").strip()
+    if overview:
+        parts.append(f"### 1. Problem Overview & Theoretical Context\n{overview}")
+    
+    sections = assignment.get("sections") or assignment.get("questions") or []
+    if isinstance(sections, list) and len(sections) > 0:
+        s_lines = ["### 2. Assignment Tasks & Core Deliverables"]
+        for idx, s in enumerate(sections, start=1):
+            title = s.get("title") or f"Task {idx}"
+            pts = s.get("points")
+            content = s.get("content") or s.get("details", "")
+            deliv = s.get("deliverable", "")
+            
+            pts_badge = f" [{pts} pts]" if pts else ""
+            s_lines.append(f"{idx}. **{title}**{pts_badge}")
+            if content:
+                s_lines.append(f"   - **Specification**: {content}")
+            if deliv:
+                s_lines.append(f"   - **Deliverable**: {deliv}")
+        parts.append("\n".join(s_lines))
+        
+    examples = assignment.get("examples") or []
+    if isinstance(examples, list) and len(examples) > 0:
+        ex_lines = ["### 3. Concrete Examples & Test Traces"]
+        for idx, ex in enumerate(examples, start=1):
+            ex_title = ex.get("title") or f"Example {ex.get('example_num', idx)}"
+            inp = ex.get("input", "")
+            out = ex.get("output", "")
+            expl = ex.get("explanation", "")
+            
+            ex_lines.append(f"**{ex_title}**:")
+            if inp:
+                ex_lines.append(f"- **Input / Operations**:\n```\n{inp}\n```")
+            if out:
+                ex_lines.append(f"- **Expected Output**: `{out}`")
+            if expl:
+                ex_lines.append(f"- **Trace Explanation**: {expl}")
+            ex_lines.append("")
+        parts.append("\n".join(ex_lines).strip())
+        
+    constraints = assignment.get("constraints") or []
+    if isinstance(constraints, list) and len(constraints) > 0:
+        c_lines = ["### 4. Technical Constraints & Performance Targets"]
+        for c in constraints:
+            c_lines.append(f"- {c}")
+        parts.append("\n".join(c_lines))
+        
+    rubric = assignment.get("rubric") or []
+    if isinstance(rubric, list) and len(rubric) > 0:
+        r_lines = ["### 5. Official Grading Rubric (100 Pts Total)"]
+        for r in rubric:
+            crit = r.get("criterion", "Criterion")
+            pts = r.get("points", 30)
+            desc = r.get("description", r.get("notes", "Meets benchmark"))
+            r_lines.append(f"- **{crit}** ({pts} pts): {desc}")
+        parts.append("\n".join(r_lines))
+
+    submission = assignment.get("submission_guidelines", "").strip()
+    if submission:
+        parts.append(f"### 6. Submission Guidelines & Expectations\n{submission}")
+        
+    return "\n\n".join(parts)
+
+
+def _build_offline_assignment(topic: str, subject: str, difficulty: str, subj_code: str) -> dict:
+    t_lower = topic.lower()
+
+    # 1. CPU Scheduling / Operating Systems
+    if any(k in t_lower for k in ["schedul", "cpu", "fcfs", "round robin", "sjf", "process"]):
+        title = "Operating Systems Lab: CPU Scheduling Algorithms (FCFS, SJF, Round Robin)"
+        overview = (
+            "Explore process scheduling mechanics in modern multiprogramming operating systems. "
+            "You will analyze and simulate First-Come First-Served (FCFS), Shortest Job First (SJF), "
+            "and preemptive Round Robin (RR) algorithms, tracking process states, CPU bursts, and queue migrations."
+        )
+        sections = [
+            {
+                "title": "Part 1: Theoretical Analysis & Manual Gantt Chart Trace",
+                "points": 30,
+                "content": "Given a workload of 5 processes with arrival and burst times, construct Gantt charts for FCFS, Non-Preemptive SJF, and Round Robin (q=4ms). Calculate average waiting and turnaround times.",
+                "deliverable": "Mathematical calculations and Gantt chart diagrams in assignment writeup."
+            },
+            {
+                "title": "Part 2: Discrete-Event Scheduling Simulator",
+                "points": 45,
+                "content": "Implement a modular scheduling engine in Python or C. Support dynamic process queues, context-switching overhead simulation, and preemptive slice countdown.",
+                "deliverable": "Working simulator executable accepting CSV process tables and emitting metrics."
+            },
+            {
+                "title": "Part 3: Comparative Performance Benchmarking",
+                "points": 25,
+                "content": "Benchmark the three algorithms over synthetic arrival distributions (exponential vs uniform) and analyze starvation vulnerabilities in SJF.",
+                "deliverable": "Empirical comparison report with turnaround time vs quantum charts."
+            }
+        ]
+        examples = [
+            {
+                "example_num": 1,
+                "title": "Example 1: Round Robin (Quantum = 4ms)",
+                "input": "Processes: P1 (Arrival: 0, Burst: 5), P2 (Arrival: 1, Burst: 3), P3 (Arrival: 2, Burst: 8)",
+                "output": "Execution Order: P1 (0-4) -> P2 (4-7) -> P3 (7-11) -> P1 (11-12) -> P3 (12-16). Avg Turnaround Time: 11.3ms",
+                "explanation": "P1 executes for 4ms, is preempted to ready queue tail. P2 completes in 3ms before slice expiration. Remaining bursts are dispatched sequentially."
+            }
+        ]
+        constraints = [
+            "1 <= Number of Processes <= 500",
+            "1 <= Burst Time <= 100ms",
+            "Time Quantum Range: 2ms <= Q <= 10ms",
+            "Context Switch Overhead: Configurable (default 0ms)"
+        ]
+        starter_code = '''# OS Coursework Scaffold: CPU Scheduling Simulator
+# Course: Operating Systems (CS-350)
+
+from dataclasses import dataclass
+from typing import List
+
+@dataclass
+class Process:
+    pid: int
+    arrival_time: int
+    burst_time: int
+    remaining_time: int = 0
+    completion_time: int = 0
+    waiting_time: int = 0
+
+    def __post_init__(self):
+        self.remaining_time = self.burst_time
+
+def run_round_robin(processes: List[Process], quantum: int):
+    """TODO: Implement preemptive Round Robin execution loop."""
+    time = 0
+    ready_queue = []
+    # Simulated execution loop
+    print(f"Starting RR simulation with Quantum={quantum}...")
+    return processes
+
+if __name__ == '__main__':
+    procs = [Process(1, 0, 5), Process(2, 1, 3), Process(3, 2, 8)]
+    run_round_robin(procs, quantum=4)
+    print("Baseline scheduler harness initialized.")
+'''
+        rubric = [
+            {"criterion": "Scheduling Logic & State Transition Correctness", "points": 40, "description": "Accurately handles queue preemption, quantum expiration, and process completion"},
+            {"criterion": "Gantt Chart & Metric Precision", "points": 35, "description": "Correct computation of waiting, turnaround, and response times across edge cases"},
+            {"criterion": "Code Modularity & Comparative Analysis", "points": 25, "description": "Clean object model, comprehensive automated test suites, and insightful benchmarking writeup"}
+        ]
+        tags = ["Operating Systems", "CPU Scheduling", "Round Robin", "Simulation"]
+
+    # 2. Cryptography / RSA / Security
+    elif any(k in t_lower for k in ["crypto", "rsa", "cipher", "security", "encryption", "hash"]):
+        title = "Applied Cryptography: RSA Key Generation, Encryption & Cryptanalysis"
+        overview = (
+            "Explore public-key cryptography through the theoretical and practical lens of the RSA cryptosystem. "
+            "You will implement asymmetric key pair generation using large pseudoprimes, perform modular exponentiation, "
+            "and demonstrate a chosen-ciphertext attack vulnerability when public exponent e=3 without random padding."
+        )
+        sections = [
+            {
+                "title": "Part 1: Primality Testing & Extended Euclidean Key Generation",
+                "points": 30,
+                "content": "Implement Miller-Rabin probabilistic primality test to generate 512-bit primes p and q. Compute RSA modulus N, Euler totient phi(N), and derive private exponent d using Extended GCD.",
+                "deliverable": "Working key generation module with mathematical correctness proofs."
+            },
+            {
+                "title": "Part 2: Modular Exponentiation & Encrypt/Decrypt Engine",
+                "points": 40,
+                "content": "Implement repeated squaring modular exponentiation. Build encrypt(M, (e, N)) and decrypt(C, (d, N)) functions supporting arbitrary message byte arrays with OAEP padding.",
+                "deliverable": "Encryption library passing bidirectional round-trip assertions."
+            },
+            {
+                "title": "Part 3: Cryptanalysis of Small Public Exponent (e=3)",
+                "points": 30,
+                "content": "Simulate sending the same unpadded message to 3 independent recipients using e=3. Use Chinese Remainder Theorem (CRT) to compute the plaintext without factoring N.",
+                "deliverable": "Exploit script demonstrating message recovery and defense remediation notes."
+            }
+        ]
+        examples = [
+            {
+                "example_num": 1,
+                "title": "Example 1: RSA Key Generation & Encryption Trace",
+                "input": "p = 61, q = 53, e = 17, Message = 65 ('A')",
+                "output": "N = 3233, phi(N) = 3120, d = 2753. Ciphertext C = 2790, Decrypted = 65",
+                "explanation": "Calculates (17 * 2753) mod 3120 = 1. C = 65^17 mod 3233 = 2790. Decryption recovers original ASCII code 65."
+            }
+        ]
+        constraints = [
+            "Modulus Size: Minimum 1024 bits for production keys (toy numbers for manual proof)",
+            "Time Complexity: Modular exponentiation in O(log e)",
+            "Never implement naive trial division for primality testing"
+        ]
+        starter_code = '''# Cryptography Coursework Scaffold: RSA Asymmetric Engine
+# Course: Cybersecurity & Applied Cryptography (CS-460)
+
+import random
+
+def ext_gcd(a: int, b: int):
+    """TODO: Extended Euclidean algorithm returning (gcd, x, y)."""
+    if a == 0:
+        return b, 0, 1
+    gcd, x1, y1 = ext_gcd(b % a, a)
+    return gcd, y1 - (b // a) * x1, x1
+
+def mod_pow(base: int, exp: int, mod: int) -> int:
+    """Fast modular exponentiation via square-and-multiply."""
+    res = 1
+    base = base % mod
+    while exp > 0:
+        if exp % 2 == 1:
+            res = (res * base) % mod
+        base = (base * base) % mod
+        exp //= 2
+    return res
+
+if __name__ == '__main__':
+    p, q = 61, 53
+    N = p * q
+    print(f"RSA modulus N = {N}")
+    assert mod_pow(65, 17, 3233) == 2790
+    print("Baseline RSA test passed!")
+'''
+        rubric = [
+            {"criterion": "Mathematical Rigor & Key Generation", "points": 35, "description": "Correct implementation of Extended GCD, modular inverse, and prime generation"},
+            {"criterion": "Cryptographic Implementation & Padding", "points": 40, "description": "Accurate encryption/decryption routines and proper defense against textbook vulnerabilities"},
+            {"criterion": "Cryptanalysis & Attack Proof", "points": 25, "description": "Clear demonstration of the CRT broadcast attack and thorough analysis writeup"}
+        ]
+        tags = ["Cybersecurity", "Cryptography", "RSA", "Algorithms"]
+    
+    # 3. LRU Cache / Caching / Memory Management
+    elif any(k in t_lower for k in ["lru", "cache", "paging", "evict"]):
+        title = f"Design & Implementation of an O(1) LRU Cache System"
+        overview = (
+            "A Least Recently Used (LRU) cache maintains items in access sequence, purging the least recently referenced element "
+            "when capacity is reached. This fundamental primitive powers caching layers in web browsers, database buffer pools, and distributed key-value stores. "
+            "In this assignment, you will architect a production-grade LRU cache operating under strict O(1) time complexity."
+        )
+        sections = [
+            {
+                "title": "Part 1: Doubly Linked List & Sentinel Architecture",
+                "points": 30,
+                "content": "Construct a doubly linked list supporting O(1) removal of arbitrary nodes and O(1) insertion at the head (most recently used position) using sentinel head and tail nodes.",
+                "deliverable": "Node and DoublyLinkedList primitives passing isolated pointer manipulation unit tests."
+            },
+            {
+                "title": "Part 2: Hash Map Integration & Eviction Engine",
+                "points": 40,
+                "content": "Combine the doubly linked list with a dictionary to achieve average O(1) get(key) and put(key, value) operations. Maintain strict capacity limit and correctly evict the tail node on overflow.",
+                "deliverable": "LRUCache class passing full test suite including capacity bounds and key eviction."
+            },
+            {
+                "title": "Part 3: Empirical Benchmarking & Complexity Validation",
+                "points": 30,
+                "content": "Instrument an empirical benchmarking harness testing cache hit rates and throughput over 100,000 synthetic operations under uniform and Zipfian access distributions.",
+                "deliverable": "Latency and hit-rate benchmarking report confirming O(1) average time complexity."
+            }
+        ]
+        examples = [
+            {
+                "example_num": 1,
+                "title": "Example 1: Capacity Eviction",
+                "input": "cache = LRUCache(2)\ncache.put(1, 1)\ncache.put(2, 2)\ncache.get(1)       # returns 1\ncache.put(3, 3)    # evicts key 2\ncache.get(2)       # returns -1 (not found)\ncache.put(4, 4)    # evicts key 1\ncache.get(1)       # returns -1 (not found)\ncache.get(3)       # returns 3\ncache.get(4)       # returns 4",
+                "output": "[null, null, null, 1, null, -1, null, -1, 3, 4]",
+                "explanation": "Key 2 is evicted when Key 3 is inserted because Key 1 was refreshed by get(1), making Key 2 the least recently accessed item. Later, inserting Key 4 evicts Key 1."
+            }
+        ]
+        constraints = [
+            "1 <= capacity <= 3000",
+            "0 <= key <= 10^4, 0 <= value <= 10^5",
+            "At most 2 * 10^5 calls will be made to get and put",
+            "get(key) and put(key, value) must strictly achieve O(1) average time complexity",
+            "Auxiliary space: O(capacity) total node allocations"
+        ]
+        starter_code = '''# University Coursework Scaffold: LRU Cache
+# Course: Data Structures & Algorithms
+
+from typing import Optional, Dict
+
+class Node:
+    def __init__(self, key: int = 0, value: int = 0):
+        self.key: int = key
+        self.value: int = value
+        self.prev: Optional['Node'] = None
+        self.next: Optional['Node'] = None
+
+class LRUCache:
+    def __init__(self, capacity: int):
+        self.capacity: int = capacity
+        self.cache: Dict[int, Node] = {}
+        # Sentinel head (MRU) and tail (LRU)
+        self.head: Node = Node()
+        self.tail: Node = Node()
+        self.head.next = self.tail
+        self.tail.prev = self.head
+
+    def get(self, key: int) -> int:
+        """TODO: Implement O(1) retrieval and MRU node promotion."""
+        if key in self.cache:
+            node = self.cache[key]
+            self._remove(node)
+            self._add_to_head(node)
+            return node.value
+        return -1
+
+    def put(self, key: int, value: int) -> None:
+        """TODO: Implement O(1) insertion, update, and capacity eviction."""
+        if key in self.cache:
+            self._remove(self.cache[key])
+        node = Node(key, value)
+        self._add_to_head(node)
+        self.cache[key] = node
+        if len(self.cache) > self.capacity:
+            lru = self.tail.prev
+            if lru and lru != self.head:
+                self._remove(lru)
+                del self.cache[lru.key]
+
+    def _remove(self, node: Node) -> None:
+        if node.prev:
+            node.prev.next = node.next
+        if node.next:
+            node.next.prev = node.prev
+
+    def _add_to_head(self, node: Node) -> None:
+        node.next = self.head.next
+        node.prev = self.head
+        if self.head.next:
+            self.head.next.prev = node
+        self.head.next = node
+
+if __name__ == "__main__":
+    print("Testing LRUCache implementation...")
+    c = LRUCache(2)
+    c.put(1, 1)
+    c.put(2, 2)
+    assert c.get(1) == 1
+    c.put(3, 3)
+    assert c.get(2) == -1
+    print("All verification assertions passed!")
+'''
+        rubric = [
+            {"criterion": "Algorithmic Logic & Sentinel Invariants", "points": 40, "description": "Passes all automated test suites, maintains head/tail sentinel invariants, and handles boundary conditions"},
+            {"criterion": "Strict O(1) Complexity & Memory Safety", "points": 30, "description": "Operations adhere strictly to O(1) time without memory leaks or dangling node pointers"},
+            {"criterion": "Code Quality, Architecture & Tests", "points": 30, "description": "Modular design, type hints, informative docstrings, and comprehensive unit assertions"}
+        ]
+        tags = ["Data Structures", "LRU Cache", "Memory Management", "Algorithms"]
+
+    # 4. Balanced Trees / BST / AVL / Rotations
+    elif any(k in t_lower for k in ["tree", "bst", "avl", "balanced", "red-black", "trie"]):
+        title = f"Self-Balancing Binary Search Tree & Dynamic AVL Rotations"
+        overview = (
+            "Construct an AVL Tree data structure that maintains height-balance invariant (|balance_factor| <= 1) across dynamic insertions and deletions. "
+            "Balanced trees guarantee logarithmic performance for lookups, range queries, and database indexing engines. "
+            "You will implement single and double rotations (LL, RR, LR, RL) and prove balance preservation."
+        )
+        sections = [
+            {
+                "title": "Part 1: Node Architecture & Height Update Invariants",
+                "points": 30,
+                "content": "Construct the AVLNode structure with left, right pointers, key, and height attribute. Implement O(1) balance factor calculation.",
+                "deliverable": "Working AVLNode and tree skeleton with height recalculation."
+            },
+            {
+                "title": "Part 2: Single & Double Rotations (LL, RR, LR, RL)",
+                "points": 40,
+                "content": "Implement left_rotate and right_rotate primitives. Detect 4 imbalance configurations and rebalance subtrees in O(1) time.",
+                "deliverable": "Complete insert and delete operations with self-balancing."
+            },
+            {
+                "title": "Part 3: Asymptotic Verification & Traversal Validation",
+                "points": 30,
+                "content": "Validate that tree height strictly never exceeds 1.44 * log2(N) over 10,000 random insertions and verify sorted in-order traversal.",
+                "deliverable": "Test harness asserting height bounds and sorted order."
+            }
+        ]
+        examples = [
+            {
+                "example_num": 1,
+                "title": "Example 1: Right-Right Imbalance",
+                "input": "tree = AVLTree()\nfor x in [10, 20, 30]:\n    tree.insert(x)",
+                "output": "Root: 20, Left: 10, Right: 30, Height: 2, Balance: 0",
+                "explanation": "Inserting 30 causes a Right-Right (RR) imbalance at root 10 (balance factor -2). A Left Rotation pivots 20 to the root, restoring balance."
+            }
+        ]
+        constraints = [
+            "1 <= N <= 10^5 dynamic operations",
+            "Keys are distinct 32-bit signed integers",
+            "Tree height must strictly satisfy H <= 1.44 * log2(N)",
+            "Search, Insert, and Delete must strictly achieve O(log N) worst-case time",
+            "Space Complexity: O(N) total node allocations"
+        ]
+        starter_code = '''# University Coursework Scaffold: AVL Balanced Tree
+# Course: Data Structures & Algorithms
+
+class AVLNode:
+    def __init__(self, key: int):
+        self.key: int = key
+        self.left = None
+        self.right = None
+        self.height: int = 1
+
+class AVLTree:
+    def get_height(self, node: AVLNode) -> int:
+        return node.height if node else 0
+
+    def get_balance(self, node: AVLNode) -> int:
+        return self.get_height(node.left) - self.get_height(node.right) if node else 0
+
+    def right_rotate(self, y: AVLNode) -> AVLNode:
+        x = y.left
+        T2 = x.right
+        x.right = y
+        y.left = T2
+        y.height = 1 + max(self.get_height(y.left), self.get_height(y.right))
+        x.height = 1 + max(self.get_height(x.left), self.get_height(x.right))
+        return x
+
+    def left_rotate(self, x: AVLNode) -> AVLNode:
+        y = x.right
+        T2 = y.left
+        y.left = x
+        x.right = T2
+        x.height = 1 + max(self.get_height(x.left), self.get_height(x.right))
+        y.height = 1 + max(self.get_height(y.left), self.get_height(y.right))
+        return y
+
+    def insert(self, root: AVLNode, key: int) -> AVLNode:
+        if not root:
+            return AVLNode(key)
+        if key < root.key:
+            root.left = self.insert(root.left, key)
+        else:
+            root.right = self.insert(root.right, key)
+        root.height = 1 + max(self.get_height(root.left), self.get_height(root.right))
+        b = self.get_balance(root)
+        if b > 1 and key < root.left.key:
+            return self.right_rotate(root)
+        if b < -1 and key > root.right.key:
+            return self.left_rotate(root)
+        if b > 1 and key > root.left.key:
+            root.left = self.left_rotate(root.left)
+            return self.right_rotate(root)
+        if b < -1 and key < root.right.key:
+            root.right = self.right_rotate(root.right)
+            return self.left_rotate(root)
+        return root
+
+if __name__ == '__main__':
+    tree = AVLTree()
+    root = None
+    for k in [10, 20, 30]:
+        root = tree.insert(root, k)
+    print("AVL Tree root key:", root.key)
+    assert root.key == 20
+    print("AVL Balance assertion verified!")
+'''
+        rubric = [
+            {"criterion": "Rotation Logic & Balance Invariant", "points": 40, "description": "Correctly executes 4 rotation cases and preserves AVL height invariants"},
+            {"criterion": "Strict O(log N) Performance & Bounds", "points": 30, "description": "Guarantees logarithmic bounds across synthetic adversarial insertion streams"},
+            {"criterion": "Code Quality, Modularity & Testing", "points": 30, "description": "Clean recursive or iterative design, type hints, and automated property test suite"}
+        ]
+        tags = ["Data Structures", "AVL Tree", "Binary Search Tree", "Rotations"]
+
+    # 5. Raft Consensus / Distributed Systems
+    elif any(k in t_lower for k in ["raft", "consensus", "paxos", "distributed"]):
+        title = "Distributed Consensus Protocol: Leader Election & Log Replication via Raft"
+        overview = (
+            "Design a replicated state machine consensus engine implementing the Raft consensus algorithm. "
+            "The protocol coordinates distributed nodes over asynchronous networks in the presence of packet drops, delays, and crash-recovery failures. "
+            "You will implement election timers, vote collection, AppendEntries heartbeats, and committed log matching."
+        )
+        sections = [
+            {
+                "title": "Part 1: Randomized Heartbeats & Leader Election Protocol",
+                "points": 35,
+                "content": "Model follower, candidate, and leader states. Implement randomized election timeout (150-300ms) and RequestVote RPC handling.",
+                "deliverable": "Working state machine transitioning to candidate and collecting quorum votes."
+            },
+            {
+                "title": "Part 2: AppendEntries RPC & Log Matching Invariant",
+                "points": 35,
+                "content": "Implement AppendEntries RPC with term validation, prevLogIndex and prevLogTerm checks, and log reconciliation.",
+                "deliverable": "Log replication engine ensuring uncommitted entries from deposed leaders are overwritten."
+            },
+            {
+                "title": "Part 3: Safety Verification & Quorum Commit Engine",
+                "points": 30,
+                "content": "Verify that leader commits an entry only once acknowledged by a majority quorum and applies entries sequentially to the state machine.",
+                "deliverable": "Test harness asserting election safety and state machine consistency."
+            }
+        ]
+        examples = [
+            {
+                "example_num": 1,
+                "title": "Example 1: Quorum Election",
+                "input": "Cluster of 5 nodes. Node 1 election timeout triggers at 220ms.",
+                "output": "Node 1 increments term to 1, votes for self, requests votes from Nodes 2-5, receives 3 votes, transitions to LEADER.",
+                "explanation": "Node 1 gathers 3 votes out of 5 (majority quorum) and immediately sends AppendEntries heartbeats to suppress other candidates."
+            }
+        ]
+        constraints = [
+            "Cluster size N = 3 or 5 nodes",
+            "Election timeout randomized between 150ms and 300ms",
+            "Heartbeat interval: 50ms",
+            "Safety: At most one leader elected per term",
+            "State Machine Safety: If a node applies entry at index i, no other node applies different entry at index i"
+        ]
+        starter_code = '''# University Coursework Scaffold: Raft Consensus Engine
+# Course: Distributed Systems
+
+from typing import List
+
+class LogEntry:
+    def __init__(self, term: int, index: int, command: str):
+        self.term: int = term
+        self.index: int = index
+        self.command: str = command
+
+class RaftNode:
+    FOLLOWER = "Follower"
+    CANDIDATE = "Candidate"
+    LEADER = "Leader"
+
+    def __init__(self, node_id: int, cluster_ids: List[int]):
+        self.node_id = node_id
+        self.cluster_ids = cluster_ids
+        self.state = self.FOLLOWER
+        self.current_term = 0
+        self.voted_for = None
+        self.log: List[LogEntry] = []
+        self.commit_index = 0
+        self.last_applied = 0
+
+    def start_election(self) -> None:
+        self.current_term += 1
+        self.state = self.CANDIDATE
+        self.voted_for = self.node_id
+        print(f"Node {self.node_id} initiated election for Term {self.current_term}")
+
+if __name__ == '__main__':
+    node = RaftNode(node_id=1, cluster_ids=[1, 2, 3])
+    node.start_election()
+    assert node.state == RaftNode.CANDIDATE
+    print("Raft baseline assertion passed!")
+'''
+        rubric = [
+            {"criterion": "Raft State Machine & Quorum Logic", "points": 40, "description": "Correctly implements terms, vote granting, quorum thresholds, and state transitions"},
+            {"criterion": "Log Matching & Safety Preservation", "points": 35, "description": "Ensures committed entries are immutable and resolves split-brain scenarios safely"},
+            {"criterion": "Architecture, Concurrency & Testing", "points": 25, "description": "Thread-safe event loops, RPC mock harness, and partitioned network tests"}
+        ]
+        tags = ["Distributed Systems", "Raft Consensus", "Networks", "Fault Tolerance"]
+
+    # 6. Graphs / Shortest Paths / Dijkstra
+    elif any(k in t_lower for k in ["graph", "dijkstra", "bfs", "dfs", "topological", "shortest path"]):
+        title = "High-Throughput Graph Engine: Dijkstra & Topological Dependency Resolution"
+        overview = (
+            "Implement an adjacency-list graph engine capable of resolving single-source shortest paths with non-negative edge weights "
+            "and computing cycle-safe topological build orders. Graph algorithms form the bedrock of navigation routing, compiler dependency graphs, and social networks."
+        )
+        sections = [
+            {
+                "title": "Part 1: Adjacency List Representation & Min-Heap Engine",
+                "points": 30,
+                "content": "Construct a memory-efficient directed graph representation using adjacency lists. Implement priority queue operations with heapq.",
+                "deliverable": "Working Graph class supporting vertex addition, weighted edges, and neighbor lookups."
+            },
+            {
+                "title": "Part 2: Dijkstra's Shortest Path with Full Path Reconstruction",
+                "points": 40,
+                "content": "Implement Dijkstra's algorithm. Maintain distances dict and previous pointers array to reconstruct the exact path.",
+                "deliverable": "Shortest path solver achieving O((V + E) log V) time complexity."
+            },
+            {
+                "title": "Part 3: Cycle Detection & Kahn's Topological Sort",
+                "points": 30,
+                "content": "Implement Kahn's in-degree queue algorithm. Detect dependency cycles and output a valid linear ordering if acyclic.",
+                "deliverable": "Topological sort module passing cyclic and acyclic graph test suites."
+            }
+        ]
+        examples = [
+            {
+                "example_num": 1,
+                "title": "Example 1: Shortest Path Calculation",
+                "input": "V = 4\nEdges = [[0, 1, 4], [0, 2, 1], [2, 1, 2], [1, 3, 1]]\nsource = 0, target = 3",
+                "output": "Shortest Distance: 4, Optimal Path: [0, 2, 1, 3]",
+                "explanation": "Direct path 0 -> 1 -> 3 has cost 4 + 1 = 5. Path through vertex 2 has cost 1 + 2 + 1 = 4, which the min-heap prioritizes."
+            }
+        ]
+        constraints = [
+            "1 <= V <= 5 * 10^4 vertices",
+            "0 <= E <= 2 * 10^5 directed edges",
+            "0 <= edge weight <= 10^4 (non-negative)",
+            "Dijkstra Time Complexity: O((V + E) log V)",
+            "Space Complexity: O(V + E) memory"
+        ]
+        starter_code = '''# University Coursework Scaffold: Graph Traversal & Dijkstra
+# Course: Data Structures & Algorithms
+
+import heapq
+from typing import List, Dict, Tuple, Optional
+
+class Graph:
+    def __init__(self, num_vertices: int):
+        self.V = num_vertices
+        self.adj: Dict[int, List[Tuple[int, int]]] = {i: [] for i in range(num_vertices)}
+
+    def add_edge(self, u: int, v: int, weight: int) -> None:
+        self.adj[u].append((v, weight))
+
+    def dijkstra(self, src: int, target: int) -> Tuple[int, List[int]]:
+        dist = {i: float('inf') for i in range(self.V)}
+        prev = {i: None for i in range(self.V)}
+        dist[src] = 0
+        pq = [(0, src)]
+
+        while pq:
+            d, u = heapq.heappop(pq)
+            if d > dist[u]:
+                continue
+            if u == target:
+                break
+            for v, w in self.adj[u]:
+                if dist[u] + w < dist[v]:
+                    dist[v] = dist[u] + w
+                    prev[v] = u
+                    heapq.heappush(pq, (dist[v], v))
+
+        path = []
+        curr = target
+        while curr is not None:
+            path.append(curr)
+            curr = prev[curr]
+        path.reverse()
+        return (int(dist[target]), path)
+
+if __name__ == '__main__':
+    g = Graph(4)
+    g.add_edge(0, 1, 4)
+    g.add_edge(0, 2, 1)
+    g.add_edge(2, 1, 2)
+    g.add_edge(1, 3, 1)
+    cost, path = g.dijkstra(0, 3)
+    assert cost == 4
+    assert path == [0, 2, 1, 3]
+    print("Dijkstra verification passed!")
+'''
+        rubric = [
+            {"criterion": "Algorithmic Logic & Priority Queue Correctness", "points": 40, "description": "Accurately processes shortest paths and prevents duplicate vertex re-visitations"},
+            {"criterion": "Asymptotic Performance & Big-O Compliance", "points": 30, "description": "Adheres to O((V+E) log V) time bounds with zero memory bottlenecks"},
+            {"criterion": "Code Quality, Modularity & Path Validation", "points": 30, "description": "Clean object model, comprehensive edge test cases, and clean documentation"}
+        ]
+        tags = ["Data Structures", "Graphs", "Dijkstra", "Shortest Path"]
+
+    # 7. General Algorithmic Topic Fallback
+    else:
+        title = f"Coursework Project: {topic}"
+        overview = (
+            f"Design, implement, and benchmark an optimal solution for '{topic}'. "
+            f"Your solution must adhere to theoretical time and space complexity targets, handle adversarial boundary conditions, "
+            f"and incorporate comprehensive verification suites."
+        )
+        sections = [
+            {
+                "title": "Part 1: State Model & Core Data Structures",
+                "points": 30,
+                "content": f"Construct foundational data structures and state representations tailored to {topic}.",
+                "deliverable": f"Modular classes and function prototypes passing initial boundary assertions."
+            },
+            {
+                "title": "Part 2: Core Algorithm & Invariant Preservation",
+                "points": 40,
+                "content": f"Implement the primary transformation logic for {topic}. Defend against empty inputs, null pointers, and integer overflows.",
+                "deliverable": f"Full functional implementation passing comprehensive test suites."
+            },
+            {
+                "title": "Part 3: Stress Benchmarking & Asymptotic Proof",
+                "points": 30,
+                "content": f"Benchmark latency and memory consumption over 50,000 synthetic operations and prove Big-O performance.",
+                "deliverable": f"Empirical benchmarking script and Big-O verification results."
+            }
+        ]
+        examples = [
+            {
+                "example_num": 1,
+                "title": "Example 1: Standard Trace",
+                "input": f"# Standard input trace for {topic}\nsolver = Solution()\nsolver.process([10, 20, 30, 40])",
+                "output": "Success: State validated and deterministic output produced",
+                "explanation": f"The algorithm processes the input sequence, maintains internal state invariants, and returns expected results."
+            }
+        ]
+        constraints = [
+            "1 <= N <= 10^5 input size",
+            "Optimal Big-O polynomial or logarithmic time complexity",
+            "Auxiliary Space Complexity: O(N) or O(1)",
+            "Robust handling of boundary inputs (null, empty, overflows)"
+        ]
+        starter_code = f'''# University Coursework Scaffold: {topic}
+# Course: {subject} ({subj_code})
+
+from typing import List, Any
+
+class Solution:
+    def solve(self, data: List[Any]) -> Any:
+        """TODO: Implement optimal solution for {topic}."""
+        if not data:
+            return None
+        return data
+
+if __name__ == '__main__':
+    print("Testing solution harness for {topic}...")
+    s = Solution()
+    res = s.solve([1, 2, 3])
+    assert res is not None
+    print("Baseline test passed successfully!")
+'''
+        rubric = [
+            {"criterion": "Algorithmic Logic & Functional Correctness", "points": 40, "description": "Passes all automated test suites, satisfies functional requirements, and guards against boundary cases"},
+            {"criterion": "Time & Space Complexity Target Adherence", "points": 30, "description": "Adheres strictly to theoretical Big-O complexity bounds without excessive allocations"},
+            {"criterion": "Code Quality, Architecture & Documentation", "points": 30, "description": "Modular design, type hints, informative docstrings, and comprehensive test harness"}
+        ]
+        tags = [topic, "Algorithms", subject]
+
+    result = {
+        "title": title,
+        "subject": subject,
+        "subject_code": subj_code,
+        "difficulty": difficulty,
+        "total_points": 100,
+        "tags": tags,
+        "overview": overview,
+        "sections": sections,
+        "questions": sections,
+        "examples": examples,
+        "constraints": constraints,
+        "starter_code": starter_code,
+        "rubric": rubric
+    }
+    result["description"] = format_assignment_description(result)
+    return result
+
+
+def generate_assignment_ai(prompt: str = None, topic: str = None, subject: str = "Computer Science & Engineering", difficulty: str = "Medium", target_section: str = "All Sections", total_points: int = 100):
     """
     Faculty AI Assistant: Generates a complete university coursework assignment
-    with starter code, rubrics, and descriptions.
+    from free-form natural language prompts with flexible sections, examples, rubrics, and starter code.
     """
-    prompt = (
-        f"You are a Computer Science Professor. Design a university programming assignment on '{topic}' for the course '{subject}' (Difficulty: {difficulty}).\n\n"
+    user_prompt = (prompt or topic or "Design a university coursework programming assignment").strip()
+
+    gemini_prompt = (
+        f"You are a distinguished university professor and curriculum architect designing coursework based on the instructor's prompt.\n\n"
+        f"INSTRUCTOR PROMPT:\n\"\"\"{user_prompt}\"\"\"\n\n"
+        f"COURSE PARAMETERS:\n"
+        f"- Target Subject: {subject}\n"
+        f"- Difficulty Tier: {difficulty}\n"
+        f"- Target Section: {target_section}\n"
+        f"- Total Target Points: {total_points}\n\n"
+        "INSTRUCTIONS:\n"
+        "Design a comprehensive, high-quality university assignment tailored specifically to this instructor's prompt.\n"
+        "Adapt flexibly to whatever the instructor requested (e.g., coding lab, theoretical problem set, case study, quiz, mini-project, or research assignment).\n"
+        "Do NOT force a rigid or fixed structure: if the prompt asks for 2 parts, create 2 parts; if 4 questions, create 4 questions; if theoretical, focus on math/proofs; if practical, include test cases and code.\n\n"
         "Return STRICT valid JSON with these keys:\n"
         "{\n"
-        '  "title": "Concise assignment title",\n'
+        '  "title": "Clear, professional, and descriptive assignment title",\n'
         '  "subject": "Course Name",\n'
-        '  "subject_code": "CS-XXX",\n'
-        '  "description": "Comprehensive description with background, requirements, constraints, and submission expectations",\n'
+        '  "subject_code": "Relevant course code (e.g. CS-301, CS-450, etc.)",\n'
+        '  "difficulty": "Easy" | "Medium" | "Challenging" | "Hard",\n'
         '  "total_points": 100,\n'
-        '  "difficulty": "Medium",\n'
-        '  "tags": ["Data Structures", "Algorithms", "Optimization"],\n'
-        '  "starter_code": "Clean starter boilerplate with comments and test harness",\n'
+        '  "tags": ["Topic1", "Topic2", "Topic3"],\n'
+        '  "overview": "Context, real-world relevance, scenario, or theoretical background based on the prompt",\n'
+        '  "sections": [\n'
+        '    {\n'
+        '      "title": "Part 1 / Question 1 / Milestone 1 Title",\n'
+        '      "points": 35,\n'
+        '      "content": "Specific task requirements, analytical questions, or implementation specifications",\n'
+        '      "deliverable": "Expected student deliverable (e.g. source file, proof writeup, test suite)"\n'
+        '    }\n'
+        '  ],\n'
+        '  "examples": [\n'
+        '    {\n'
+        '      "example_num": 1,\n'
+        '      "title": "Example / Trace 1",\n'
+        '      "input": "Sample inputs, test cases, or execution trace",\n'
+        '      "output": "Expected return value or system state",\n'
+        '      "explanation": "Clear explanation of intermediate states or theoretical reasoning"\n'
+        '    }\n'
+        '  ],\n'
+        '  "constraints": ["Constraint / requirement 1", "Constraint 2"],\n'
+        '  "starter_code": "Optional clean starter code or skeleton if coding task (empty string if purely theoretical)",\n'
         '  "rubric": [\n'
-        '    {"criterion": "Algorithmic Logic & Correctness", "points": 40, "description": "Passes all automated test suites and edge cases"},\n'
-        '    {"criterion": "Time & Space Complexity", "points": 30, "description": "Meets Big-O requirements without memory leaks"},\n'
-        '    {"criterion": "Code Quality & Documentation", "points": 30, "description": "Modular design, type hints, and README"}\n'
-        '  ]\n'
+        '    {"criterion": "Criterion Name", "points": 40, "description": "Specific benchmark standard"}\n'
+        '  ],\n'
+        '  "submission_guidelines": "Instructions on what to submit via the NexusEdu AI platform"\n'
         "}"
     )
-    system_instruction = "You are a university professor creating rigorous CS assignments. Return ONLY valid JSON."
-    res = call_gemini(prompt, system_instruction=system_instruction)
+    system_instruction = "You are an expert university professor and curriculum director creating rigorous CS coursework. Return ONLY valid JSON."
+    res = call_gemini(gemini_prompt, system_instruction=system_instruction)
 
     eval_data = None
     if res:
@@ -1147,81 +1919,65 @@ def generate_assignment_ai(topic: str, subject: str = "Computer Science", diffic
         except Exception:
             pass
 
+    subj_code = "CS-401" if ("system" in subject.lower() or "os" in subject.lower()) else ("CS-302" if "algo" in subject.lower() else "CS-201")
+    fallback = _build_offline_assignment(user_prompt, subject, difficulty, subj_code)
+
     if eval_data:
-        # Normalize tags to a list of strings
+        # Normalize tags
         raw_tags = eval_data.get("tags")
         if isinstance(raw_tags, str):
             tags_list = [t.strip() for t in raw_tags.split(",") if t.strip()]
         elif isinstance(raw_tags, list):
             tags_list = [str(t).strip() for t in raw_tags if str(t).strip()]
         else:
-            tags_list = [topic, "Algorithms", subject]
+            tags_list = fallback["tags"]
 
         # Ensure structured rubric exists
         rubric = eval_data.get("rubric")
         if not rubric or not isinstance(rubric, list):
-            rubric = [
-                {"criterion": "Algorithmic Logic & Correctness", "points": 40, "description": "Passes all automated test suites and edge cases"},
-                {"criterion": "Time & Space Complexity", "points": 30, "description": "Meets Big-O requirements without memory leaks"},
-                {"criterion": "Code Quality & Documentation", "points": 30, "description": "Modular design, type hints, and README"}
-            ]
+            rubric = fallback["rubric"]
+
+        # Ensure sections / questions exist
+        sections = eval_data.get("sections") or eval_data.get("questions")
+        if not sections or not isinstance(sections, list) or len(sections) == 0:
+            sections = fallback["sections"]
+
+        # Examples
+        examples = eval_data.get("examples")
+        if examples is None or not isinstance(examples, list):
+            examples = fallback.get("examples", [])
+
+        # Constraints
+        constraints = eval_data.get("constraints")
+        if constraints is None or not isinstance(constraints, list):
+            constraints = fallback.get("constraints", [])
 
         eval_data["tags"] = tags_list
         eval_data["rubric"] = rubric
+        eval_data["sections"] = sections
+        eval_data["questions"] = sections
+        eval_data["examples"] = examples
+        eval_data["constraints"] = constraints
+        if not eval_data.get("overview"):
+            eval_data["overview"] = fallback["overview"]
         if not eval_data.get("total_points"):
-            eval_data["total_points"] = 100
+            eval_data["total_points"] = total_points or 100
         if not eval_data.get("subject"):
             eval_data["subject"] = subject
         if not eval_data.get("difficulty"):
             eval_data["difficulty"] = difficulty
         if not eval_data.get("subject_code"):
-            eval_data["subject_code"] = "CS-401" if ("system" in subject.lower() or "os" in subject.lower()) else ("CS-302" if "algo" in subject.lower() else "CS-201")
+            eval_data["subject_code"] = subj_code
+        if "starter_code" not in eval_data:
+            eval_data["starter_code"] = fallback.get("starter_code", "")
+
+        # Synthesize rich description
+        eval_data["description"] = format_assignment_description(eval_data)
 
         return {"success": True, "assignment": eval_data}
 
     # High-quality fallback assignment generator
-    subj_code = "CS-401" if ("system" in subject.lower() or "os" in subject.lower()) else ("CS-302" if "algo" in subject.lower() else "CS-201")
-    return {
-        "success": True,
-        "assignment": {
-            "title": f"Implementation & Benchmarking: {topic}",
-            "subject": subject,
-            "subject_code": subj_code,
-            "description": (
-                f"### Coursework: {topic}\n\n"
-                f"**Objective**: Implement an efficient, modular solution for {topic} fulfilling strict theoretical time and memory constraints.\n\n"
-                "**Requirements**:\n"
-                "1. Implement core state transitions respecting boundary conditions.\n"
-                "2. Benchmark memory usage and execution latency over simulated input streams.\n"
-                "3. Submit a clean GitHub repository containing unit test suites and architectural documentation."
-            ),
-            "total_points": 100,
-            "difficulty": difficulty,
-            "tags": [topic, "Algorithms", subject],
-            "starter_code": f"""# University Coursework Scaffold: {topic}
-# Course: {subject} ({subj_code})
-
-import time
-from typing import List, Any
-
-def solve_problem(input_stream: List[Any]) -> Any:
-    \"\"\"
-    TODO: Implement your optimal solution for {topic}.
-    Ensure time complexity is within theoretical bounds.
-    \"\"\"
-    pass
-
-if __name__ == '__main__':
-    print("Executing unit test harness for {topic}...")
-    # Add automated assertion checks
-""",
-            "rubric": [
-                {"criterion": "Algorithmic Correctness", "points": 40, "description": "Passes all automated test suites and edge cases"},
-                {"criterion": "Time & Space Complexity", "points": 30, "description": "Meets Big-O requirements without memory leaks"},
-                {"criterion": "Code Quality & Documentation", "points": 30, "description": "Modular design, type hints, and README"}
-            ]
-        }
-    }
+    return {"success": True, "assignment": fallback}
 
 def evaluate_submission_with_ai(assignment_title: str, assignment_desc: str, student_code: str, student_notes: str):
     """

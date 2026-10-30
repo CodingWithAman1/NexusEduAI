@@ -314,53 +314,134 @@ async function handleCreateAssignmentForm(e) {
     }
 }
 
-async function handleAIGenerateAssignment() {
-    const topic = prompt("Enter assignment topic (e.g. 'LRU Cache Design', 'Distributed Consensus with Raft', 'Binary Search Tree Balancing'):");
-    if (!topic) return;
+const ASSIGNMENT_PROMPT_TEMPLATES = {
+    cpu_scheduling: "Create an Operating Systems lab on CPU Scheduling: FCFS, Round Robin (quantum=4ms), and Shortest Job First. Ask students to calculate average waiting time and turnaround time, show Gantt chart trace examples, and write a Python or C simulation with a 100 pt grading rubric.",
+    lru_cache: "Design an in-depth assignment on an O(1) LRU Cache data structure. Include doubly linked list sentinel nodes, hash table lookup, capacity eviction test cases, Big-O bounds, and complete starter code.",
+    raft_consensus: "Design a Distributed Systems assignment on Raft Consensus protocol with 3 parts: Leader Election with randomized timers, AppendEntries log replication, and Network Partition split-brain defense.",
+    graph_dijkstra: "Create a Data Structures assignment on Graph Algorithms: Priority Queue Dijkstra's Shortest Path with path reconstruction, cycle detection, and Kahn's Topological Sort with test cases.",
+    rsa_crypto: "Design an Applied Cryptography assignment on RSA Encryption: Key generation with Miller-Rabin primality, modular exponentiation, and Chinese Remainder Theorem cryptanalysis on small exponent e=3.",
+    dp_knapsack: "Create an Advanced Algorithms lab on 2D Dynamic Programming (0/1 Knapsack & Subset Sum), memory optimization to 1D array, item reconstruction trace, and unit tests.",
+    cnn_pytorch: "Design a Machine Learning assignment on Convolutional Neural Networks (CNN) with PyTorch for image classification on MNIST. Include architectural layers, loss tracking, and evaluation rubric."
+};
 
-    const subject = document.getElementById('assign-subject')?.value || 'Computer Science & Engineering';
-    const difficulty = document.getElementById('assign-difficulty')?.value || 'Medium';
+function applyAssignmentPromptTemplate(key) {
+    const promptInput = document.getElementById('ai-assignment-prompt');
+    if (!promptInput) return;
+    const text = ASSIGNMENT_PROMPT_TEMPLATES[key] || '';
+    if (text) {
+        promptInput.value = text;
+        promptInput.focus();
+        showToast("💡 Template loaded into prompt box! You can customize it freely.", "info");
+    }
+}
 
-    const genBtn = document.getElementById('ai-gen-assign-btn');
-    if (genBtn) {
-        genBtn.disabled = true;
-        genBtn.innerHTML = `<span>⚡ Gemini Drafting Assignment...</span>`;
+async function handleGenerateFromPrompt(mode = 'draft') {
+    const promptInput = document.getElementById('ai-assignment-prompt');
+    const promptText = promptInput ? promptInput.value.trim() : '';
+    if (!promptText) {
+        showToast("Please enter an assignment prompt or click a quick template above!", "warning");
+        if (promptInput) promptInput.focus();
+        return;
     }
 
-    try {
-        const resp = await fetch('/api/ai/generate-assignment', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ topic, subject, difficulty })
-        });
-        const data = await resp.json();
+    const section = document.getElementById('ai-prompt-section')?.value || 'All Sections';
+    const difficulty = document.getElementById('ai-prompt-difficulty')?.value || 'Medium';
+    const totalPoints = parseInt(document.getElementById('ai-prompt-points')?.value || '100', 10);
+    const subject = document.getElementById('assign-subject')?.value || 'Computer Science & Engineering';
 
-        if (genBtn) {
-            genBtn.disabled = false;
-            genBtn.innerHTML = `<span>✨ Generate with AI</span>`;
+    if (mode === 'pdf') {
+        const btn = document.getElementById('ai-prompt-pdf-btn');
+        const origHtml = btn ? btn.innerHTML : '';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = `<span>⏳ Gemini Generating PDF...</span>`;
         }
+        showToast("⚡ Drafting and compiling publication-grade PDF sheet...", "info");
 
-        if (data.success && data.assignment) {
+        try {
+            const resp = await fetch('/api/ai/generate-assignment-pdf', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    prompt: promptText,
+                    subject,
+                    difficulty,
+                    section,
+                    totalPoints
+                })
+            });
+
+            if (!resp.ok) throw new Error("PDF generation failed");
+
+            const blob = await resp.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const contentDisp = resp.headers.get('Content-Disposition');
+            let filename = 'Coursework_Specification.pdf';
+            if (contentDisp && contentDisp.includes('filename=')) {
+                filename = contentDisp.split('filename=')[1].replace(/["']/g, '').trim();
+            }
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+            playChime("coin");
+            showToast("📄 Prompt-generated PDF downloaded successfully!", "success");
+        } catch (err) {
+            console.error("Prompt PDF generation failed:", err);
+            showToast("Failed to generate PDF from prompt. Please try again.", "error");
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = origHtml;
+            }
+        }
+    } else {
+        // mode === 'draft' -> populate form below
+        const btn = document.getElementById('ai-prompt-draft-btn');
+        const origHtml = btn ? btn.innerHTML : '';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = `<span>⚡ Drafting with Gemini...</span>`;
+        }
+        showToast("✨ Gemini drafting assignment from your prompt...", "info");
+
+        try {
+            const resp = await fetch('/api/ai/generate-assignment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    prompt: promptText,
+                    subject,
+                    difficulty,
+                    section,
+                    totalPoints
+                })
+            });
+
+            const data = await resp.json();
+            if (!data.success || !data.assignment) throw new Error(data.error || "Failed to draft assignment");
+
             const a = data.assignment;
-            if (document.getElementById('assign-title')) document.getElementById('assign-title').value = a.title || topic;
+            if (document.getElementById('assign-title')) document.getElementById('assign-title').value = a.title || 'Coursework Assignment';
             if (document.getElementById('assign-subject')) document.getElementById('assign-subject').value = a.subject || subject;
             if (document.getElementById('assign-subject-code')) document.getElementById('assign-subject-code').value = a.subject_code || 'CS-401';
-            if (document.getElementById('assign-points')) document.getElementById('assign-points').value = a.total_points || 100;
+            if (document.getElementById('assign-section')) document.getElementById('assign-section').value = section;
+            if (document.getElementById('assign-points')) document.getElementById('assign-points').value = a.total_points || totalPoints;
             if (document.getElementById('assign-difficulty')) document.getElementById('assign-difficulty').value = a.difficulty || difficulty;
-            
+
             const tagsVal = Array.isArray(a.tags) ? a.tags.join(', ') : (typeof a.tags === 'string' ? a.tags : '');
             if (document.getElementById('assign-tags')) document.getElementById('assign-tags').value = tagsVal;
-            
+
             let desc = a.description || '';
-            if (Array.isArray(a.rubric) && a.rubric.length) {
-                desc += "\n\nGrading Rubric:\n" + a.rubric.map(r => `- ${r.criterion} (${r.points || 30} pts): ${r.description || ''}`).join('\n');
+            if (Array.isArray(a.rubric) && a.rubric.length && !desc.toLowerCase().includes('rubric')) {
+                desc += "\n\n### 5. Official Grading Rubric (100 Pts Total)\n" + a.rubric.map(r => `- **${r.criterion}** (${r.points || 30} pts): ${r.description || ''}`).join('\n');
             }
             if (document.getElementById('assign-description')) document.getElementById('assign-description').value = desc;
-            if (document.getElementById('assign-starter-code') && a.starter_code) {
-                document.getElementById('assign-starter-code').value = a.starter_code;
-            }
+            if (document.getElementById('assign-starter-code')) document.getElementById('assign-starter-code').value = a.starter_code || '';
 
-            // Set due date default to 7 days from now if not chosen
             const dueDateInput = document.getElementById('assign-due-date');
             if (dueDateInput && !dueDateInput.value) {
                 const nextWeek = new Date();
@@ -369,16 +450,31 @@ async function handleAIGenerateAssignment() {
             }
 
             playChime("coin");
-            showToast("✨ Assignment generated by Gemini AI! Review and post to target section.", "success");
-        } else {
-            showToast(data.error || "Failed to generate assignment with AI", "error");
+            showToast("✨ Assignment drafted into form below! Review and post to your section.", "success");
+            const formElem = document.getElementById('create-assignment-form');
+            if (formElem) {
+                formElem.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        } catch (err) {
+            console.error("Prompt drafting failed:", err);
+            showToast("Failed to draft assignment from prompt: " + err.message, "error");
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = origHtml;
+            }
         }
-    } catch (err) {
-        if (genBtn) {
-            genBtn.disabled = false;
-            genBtn.innerHTML = `<span>✨ Generate with AI</span>`;
-        }
-        showToast("Error generating assignment with AI", "error");
+    }
+}
+
+async function handleAIGenerateAssignment() {
+    const promptInput = document.getElementById('ai-assignment-prompt');
+    if (promptInput) {
+        promptInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        promptInput.focus();
+        showToast("Type your assignment prompt or click a quick template chip above!", "info");
+    } else {
+        handleGenerateFromPrompt('draft');
     }
 }
 
