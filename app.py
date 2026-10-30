@@ -1,5 +1,5 @@
 from functools import wraps
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for, Response, send_from_directory, g
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, Response, send_from_directory, send_file, g
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
@@ -7,6 +7,7 @@ import json
 import random
 import os
 import io
+import re
 import csv
 import secrets
 import hmac
@@ -20,6 +21,7 @@ from services.ai_service import (
     play_ai_code_arena, play_ai_mock_interview, generate_assignment_ai, evaluate_submission_with_ai,
     test_gemini_key, get_active_gemini_key
 )
+from services.pdf_service import generate_assignment_pdf_bytes
 from services.gamification_service import (
     calculate_level_progress, award_activity_reward,
     claim_daily_loot_box, get_loot_box_status,
@@ -879,6 +881,67 @@ def create_assignment():
         'assignmentId': new_id,
         'message': f"Assignment '{title}' published to {section}" + (f" with attachment '{att_name}'!" if att_name else "!")
     })
+
+@app.route('/api/assignments/<int:assignment_id>/pdf', methods=['GET'])
+@login_required
+def download_assignment_pdf(assignment_id):
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT a.*, COALESCE(u.display_name, a.faculty_name, 'Faculty In-Charge') as faculty_name 
+        FROM assignments a 
+        LEFT JOIN users u ON a.faculty_id = u.id 
+        WHERE a.id = ?
+    """, (assignment_id,))
+    assignment = cur.fetchone()
+    conn.close()
+
+    if not assignment:
+        return jsonify({'error': 'Assignment not found'}), 404
+
+    assign_dict = dict(assignment)
+    pdf_bytes = generate_assignment_pdf_bytes(assign_dict)
+
+    raw_title = assign_dict.get('title', 'Assignment')
+    clean_title = re.sub(r'[^\w\-_\. ]', '_', raw_title).strip() or 'Assignment'
+
+    return send_file(
+        io.BytesIO(pdf_bytes),
+        mimetype='application/pdf',
+        as_attachment=True,
+        download_name=f"{clean_title}_Specification.pdf"
+    )
+
+@app.route('/api/assignments/preview-pdf', methods=['POST'])
+@login_required
+def preview_assignment_pdf():
+    user = get_current_user()
+    data = request.json or {}
+
+    assign_dict = {
+        'title': data.get('title', 'Assignment Draft'),
+        'subject': data.get('subject', 'Computer Science & Engineering'),
+        'subject_code': data.get('subjectCode') or data.get('subject_code', 'CS-401'),
+        'section': data.get('section', 'All Sections'),
+        'due_date': data.get('dueDate') or data.get('due_date', 'Upcoming'),
+        'total_points': data.get('totalPoints') or data.get('total_points', 100),
+        'difficulty': data.get('difficulty', 'Medium'),
+        'tags': data.get('tags', ''),
+        'description': data.get('description', ''),
+        'starter_code': data.get('starterCode') or data.get('starter_code', ''),
+        'faculty_name': (user.get('display_name') or user.get('name')) if user else 'Faculty In-Charge'
+    }
+
+    pdf_bytes = generate_assignment_pdf_bytes(assign_dict)
+    raw_title = assign_dict.get('title', 'Assignment_Draft')
+    clean_title = re.sub(r'[^\w\-_\. ]', '_', raw_title).strip() or 'Assignment_Draft'
+
+    return send_file(
+        io.BytesIO(pdf_bytes),
+        mimetype='application/pdf',
+        as_attachment=True,
+        download_name=f"{clean_title}_Specification.pdf"
+    )
 
 @app.route('/api/assignments/<int:assignment_id>/submit', methods=['POST'])
 @student_required

@@ -1260,6 +1260,10 @@ function renderAssignmentCard(assignment, index = 0) {
                 </div>
 
                 <div class="flex items-center gap-2">
+                    <a href="/api/assignments/${assignment.id}/pdf" target="_blank" download class="px-2.5 py-1.5 rounded-lg bg-slate-850 hover:bg-slate-700 text-slate-300 font-medium border border-white/10 flex items-center gap-1 transition-colors text-xs" title="Download official coursework PDF sheet">
+                        <span>📄 PDF Sheet</span>
+                    </a>
+
                     <button onclick="openAIAssignmentModal(${assignment.id})" class="px-3 py-1.5 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 font-medium border border-indigo-500/30 flex items-center gap-1.5 transition-colors">
                         <svg class="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
                         AI Guidance

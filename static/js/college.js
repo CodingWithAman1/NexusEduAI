@@ -229,6 +229,9 @@ async function loadFacultyAssignments(section = window._facultyActiveSection || 
                     <span class="text-[10px] text-slate-500 font-mono mt-1 block">Due: ${a.due_date} • ${a.total_points} Pts • ${a.total_submissions || 0} Submissions</span>
                 </div>
                 <div class="flex items-center gap-2 shrink-0">
+                    <a href="/api/assignments/${a.id}/pdf" target="_blank" download class="px-3 py-1.5 rounded-lg bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 text-xs font-bold transition-all flex items-center gap-1" title="Download official coursework PDF sheet">
+                        📄 Export PDF
+                    </a>
                     ${a.attachment_url ? `
                         <a href="${a.attachment_url}" target="_blank" download class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all">
                             📥 Download File
@@ -376,6 +379,63 @@ async function handleAIGenerateAssignment() {
             genBtn.innerHTML = `<span>✨ Generate with AI</span>`;
         }
         showToast("Error generating assignment with AI", "error");
+    }
+}
+
+async function previewOrExportDraftPDF() {
+    const title = document.getElementById('assign-title')?.value || 'Assignment Specification Draft';
+    const subject = document.getElementById('assign-subject')?.value || 'Computer Science & Engineering';
+    const subjectCode = document.getElementById('assign-subject-code')?.value || 'CS-401';
+    const section = document.getElementById('assign-section')?.value || 'All Sections';
+    const dueDate = document.getElementById('assign-due-date')?.value || 'Upcoming';
+    const totalPoints = document.getElementById('assign-points')?.value || '100';
+    const difficulty = document.getElementById('assign-difficulty')?.value || 'Medium';
+    const tags = document.getElementById('assign-tags')?.value || '';
+    const description = document.getElementById('assign-description')?.value || '';
+    const starterCode = document.getElementById('assign-starter-code')?.value || '';
+
+    if (!description && !title) {
+        showToast("Please enter an assignment title or generate with AI first", "warning");
+        return;
+    }
+
+    showToast("📄 Generating official Assignment PDF...", "info");
+
+    try {
+        const resp = await fetch('/api/assignments/preview-pdf', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                title,
+                subject,
+                subjectCode,
+                section,
+                dueDate,
+                totalPoints,
+                difficulty,
+                tags,
+                description,
+                starterCode
+            })
+        });
+
+        if (!resp.ok) throw new Error("PDF Generation failed");
+
+        const blob = await resp.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const safeTitle = title.replace(/[^\w\-_\. ]/g, '_').trim() || 'Assignment';
+        a.download = `${safeTitle}_Specification.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+        playChime("coin");
+        showToast("📄 Assignment PDF downloaded successfully!", "success");
+    } catch (err) {
+        console.error("Error generating draft PDF:", err);
+        showToast("Failed to generate assignment PDF", "error");
     }
 }
 
