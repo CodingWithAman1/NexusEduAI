@@ -18,7 +18,7 @@ from services.github_service import fetch_github_stats
 from services.ai_service import (
     generate_ai_analysis, get_assignment_ai_guidance, process_ai_chat_query,
     play_ai_code_arena, play_ai_mock_interview, generate_assignment_ai, evaluate_submission_with_ai,
-    test_gemini_key
+    test_gemini_key, get_active_gemini_key
 )
 from services.gamification_service import (
     calculate_level_progress, award_activity_reward,
@@ -387,11 +387,10 @@ def connect_handles():
     })
 
 @app.route('/api/stats/verify-handle', methods=['GET'])
-@login_required
 def verify_handle():
     """Tests if a username is reachable on LeetCode or GitHub"""
     platform = request.args.get('platform', 'leetcode')
-    username = request.args.get('username', '').strip()
+    username = (request.args.get('username', '') or '').strip().lstrip('@').strip()
 
     if not username:
         return jsonify({'valid': False, 'message': 'Username is required'}), 400
@@ -410,7 +409,8 @@ def verify_handle():
             'username': username,
             'totalSolved': stats.get('totalSolved', 0),
             'acceptanceRate': stats.get('acceptanceRate', 0),
-            'ranking': stats.get('ranking', 0)
+            'ranking': stats.get('ranking', 0),
+            'message': 'LeetCode handle verified!' if is_valid else 'Could not verify LeetCode username'
         })
     elif platform == 'github':
         stats = fetch_github_stats(username)
@@ -428,7 +428,8 @@ def verify_handle():
             'publicRepos': stats.get('publicRepos', 0),
             'stars': stats.get('totalStars', 0),
             'commits': stats.get('totalCommitsYear', 0),
-            'avatar': stats.get('avatarUrl')
+            'avatar': stats.get('avatarUrl'),
+            'message': 'GitHub handle verified!' if is_valid else 'Could not verify GitHub username'
         })
     return jsonify({'valid': False, 'message': 'Invalid platform'}), 400
 
@@ -1237,25 +1238,68 @@ def set_gemini_api_key():
     conn.close()
 
     session['gemini_api_key'] = api_key
+    if hasattr(g, 'current_user') and g.current_user:
+        g.current_user['gemini_api_key'] = api_key
+    Config.GEMINI_API_KEY = api_key
+    os.environ['GEMINI_API_KEY'] = api_key
+
+    # Persist to .env if present
+    try:
+        env_path = os.path.join(os.path.dirname(__file__), '.env')
+        if os.path.exists(env_path):
+            with open(env_path, 'r', encoding='utf-8') as ef:
+                lines = ef.readlines()
+            found = False
+            new_lines = []
+            for line in lines:
+                if line.startswith('GEMINI_API_KEY='):
+                    new_lines.append(f'GEMINI_API_KEY={api_key}\n')
+                    found = True
+                else:
+                    new_lines.append(line)
+            if not found:
+                new_lines.append(f'\nGEMINI_API_KEY={api_key}\n')
+            with open(env_path, 'w', encoding='utf-8') as ef:
+                ef.writelines(new_lines)
+    except Exception:
+        pass
+
     return jsonify({
         'success': True,
         'message': 'Google Gemini 2.0 Flash is successfully connected and active!'
     })
 
-@app.route('/api/ai/status', methods=['GET'])
+@app.route('/api/ai/disconnect-key', methods=['POST'])
 @login_required
+def disconnect_gemini_api_key():
+    user = get_current_user()
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute('UPDATE users SET gemini_api_key = NULL WHERE id = ?', (user['id'],))
+    conn.commit()
+    conn.close()
+
+    session.pop('gemini_api_key', None)
+    if hasattr(g, 'current_user') and g.current_user:
+        g.current_user['gemini_api_key'] = None
+    Config.GEMINI_API_KEY = None
+    os.environ.pop('GEMINI_API_KEY', None)
+
+    return jsonify({
+        'success': True,
+        'message': 'Gemini API key disconnected. System reverted to Offline Heuristics Engine.'
+    })
+
+@app.route('/api/ai/status', methods=['GET'])
 def get_ai_status():
     user = get_current_user() or {}
-    has_key = bool(
-        user.get('gemini_api_key') or
-        session.get('gemini_api_key') or
-        getattr(Config, 'GEMINI_API_KEY', None) or
-        os.environ.get('GEMINI_API_KEY') or
-        os.environ.get('GOOGLE_API_KEY')
-    )
+    key = get_active_gemini_key(user.get('gemini_api_key'))
+    has_key = bool(key)
+    masked = f"{key[:6]}...{key[-4:]}" if has_key and len(key) > 10 else None
     return jsonify({
         'connected': has_key,
-        'model': 'Google Gemini 2.0 Flash (Live API)' if has_key else 'Nexus AI Reasoning Engine'
+        'model': 'Google Gemini 2.0 Flash (Live API)' if has_key else 'Nexus Offline Heuristics Engine',
+        'maskedKey': masked
     })
 
 @app.route('/api/ai/assignment-helper', methods=['POST'])

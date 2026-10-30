@@ -4,21 +4,81 @@ import json
 import re
 from config import Config
 
+def get_active_gemini_key(user_key: str = None) -> str:
+    """
+    Dynamically resolves the active Google Gemini API key across:
+    1. Explicit function argument (user_key)
+    2. Active Flask session ('gemini_api_key')
+    3. Flask global current user record (g.current_user['gemini_api_key'])
+    4. Database lookup if a user is logged into session
+    5. Config.GEMINI_API_KEY
+    6. System / .env environment variables (GEMINI_API_KEY, GOOGLE_API_KEY)
+    """
+    if user_key and str(user_key).strip():
+        return str(user_key).strip()
+
+    # 1. Check Flask request context (session, g.current_user, or active session DB user)
+    try:
+        from flask import session, g, has_request_context
+        if has_request_context():
+            # Check session
+            sess_key = session.get('gemini_api_key')
+            if sess_key and str(sess_key).strip():
+                return str(sess_key).strip()
+
+            # Check g.current_user
+            if hasattr(g, 'current_user') and g.current_user:
+                db_key = g.current_user.get('gemini_api_key')
+                if db_key and str(db_key).strip():
+                    return str(db_key).strip()
+
+            # If user_id in session, do a fast DB lookup
+            uid = session.get('user_id')
+            if uid:
+                from database.db import get_db
+                conn = get_db()
+                cur = conn.cursor()
+                cur.execute("SELECT gemini_api_key FROM users WHERE id = ?", (uid,))
+                row = cur.fetchone()
+                conn.close()
+                if row and row['gemini_api_key'] and str(row['gemini_api_key']).strip():
+                    session['gemini_api_key'] = str(row['gemini_api_key']).strip()
+                    return str(row['gemini_api_key']).strip()
+    except Exception:
+        pass
+
+    # 2. Check Config and Environment variables
+    cfg_key = getattr(Config, 'GEMINI_API_KEY', None)
+    if cfg_key and str(cfg_key).strip():
+        return str(cfg_key).strip()
+
+    env_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+    if env_key and str(env_key).strip():
+        return str(env_key).strip()
+
+    # 3. Reload from .env if present
+    try:
+        from dotenv import dotenv_values
+        env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env')
+        if os.path.exists(env_path):
+            vals = dotenv_values(env_path)
+            k = vals.get('GEMINI_API_KEY') or vals.get('GOOGLE_API_KEY')
+            if k and str(k).strip():
+                os.environ['GEMINI_API_KEY'] = str(k).strip()
+                return str(k).strip()
+    except Exception:
+        pass
+
+    return None
+
 def call_gemini(prompt: str, system_instruction: str = None, user_key: str = None) -> str:
     """
     Invokes Google Gemini API using the official google-genai SDK
     with fast fallback across candidate models and resilient direct REST API fallback.
     """
-    api_key = (
-        user_key or
-        getattr(Config, 'GEMINI_API_KEY', None) or 
-        os.environ.get("GEMINI_API_KEY") or 
-        os.environ.get("GOOGLE_API_KEY")
-    )
-    if not api_key or not str(api_key).strip():
+    clean_key = get_active_gemini_key(user_key)
+    if not clean_key:
         return None
-
-    clean_key = str(api_key).strip()
 
     # 1. Attempt official google-genai SDK
     try:
@@ -27,7 +87,8 @@ def call_gemini(prompt: str, system_instruction: str = None, user_key: str = Non
         
         candidate_models = [
             'gemini-2.0-flash',
-            'gemini-1.5-flash'
+            'gemini-1.5-flash',
+            'gemini-1.5-pro'
         ]
         
         for model_name in candidate_models:
@@ -49,50 +110,57 @@ def call_gemini(prompt: str, system_instruction: str = None, user_key: str = Non
         pass
 
     # 2. Resilient Direct Google Gemini REST API Fallback
-    try:
-        import requests
-        rest_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={clean_key}"
-        payload = {
-            "contents": [{"parts": [{"text": prompt}]}]
-        }
-        if system_instruction:
-            payload["systemInstruction"] = {"parts": [{"text": system_instruction}]}
+    candidate_rest_models = ['gemini-2.0-flash', 'gemini-1.5-flash']
+    for m in candidate_rest_models:
+        try:
+            import requests
+            rest_url = f"https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent?key={clean_key}"
+            payload = {
+                "contents": [{"parts": [{"text": prompt}]}]
+            }
+            if system_instruction:
+                payload["systemInstruction"] = {"parts": [{"text": system_instruction}]}
 
-        r = requests.post(rest_url, json=payload, headers={"Content-Type": "application/json"}, timeout=14)
-        if r.status_code == 200:
-            data = r.json()
-            candidates = data.get("candidates", [])
-            if candidates:
-                parts = candidates[0].get("content", {}).get("parts", [])
-                if parts and "text" in parts[0]:
-                    return parts[0]["text"].strip()
-        else:
-            print(f"Gemini REST notice status {r.status_code}")
-    except Exception as rest_err:
-        print(f"Gemini REST error: {rest_err}")
+            r = requests.post(rest_url, json=payload, headers={"Content-Type": "application/json"}, timeout=14)
+            if r.status_code == 200:
+                data = r.json()
+                candidates = data.get("candidates", [])
+                if candidates:
+                    parts = candidates[0].get("content", {}).get("parts", [])
+                    if parts and "text" in parts[0]:
+                        return parts[0]["text"].strip()
+            else:
+                print(f"Gemini REST notice status {r.status_code} for {m}")
+        except Exception as rest_err:
+            print(f"Gemini REST error for {m}: {rest_err}")
 
     return None
 
 def test_gemini_key(api_key: str):
-    """Tests a Gemini API key with a fast verification ping"""
+    """Tests a Gemini API key with a fast verification ping across production models"""
     if not api_key:
         return False, "API key cannot be empty."
     
     clean_key = str(api_key).strip()
-    try:
-        import requests
-        rest_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={clean_key}"
-        payload = {
-            "contents": [{"parts": [{"text": "Respond with: 'Connected'"}]}]
-        }
-        r = requests.post(rest_url, json=payload, headers={"Content-Type": "application/json"}, timeout=8)
-        if r.status_code == 200:
-            return True, "Google Gemini 2.0 Flash is verified & active!"
-        else:
-            err_msg = r.json().get("error", {}).get("message", "Google Gemini API rejected this key.")
-            return False, err_msg
-    except Exception as e:
-        return False, f"Connection error: {str(e)}"
+    candidate_models = ['gemini-2.0-flash', 'gemini-1.5-flash']
+    last_err = "Google Gemini API rejected this key."
+
+    for model_name in candidate_models:
+        try:
+            import requests
+            rest_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={clean_key}"
+            payload = {
+                "contents": [{"parts": [{"text": "Respond with: 'Connected'"}]}]
+            }
+            r = requests.post(rest_url, json=payload, headers={"Content-Type": "application/json"}, timeout=8)
+            if r.status_code == 200:
+                return True, f"Google Gemini ({model_name}) is verified & active!"
+            else:
+                last_err = r.json().get("error", {}).get("message", last_err)
+        except Exception as e:
+            last_err = f"Connection error: {str(e)}"
+
+    return False, last_err
 
 def generate_ai_analysis(user_profile, leetcode_stats, github_stats, assignments, submissions):
     """
@@ -290,44 +358,49 @@ def process_ai_chat_query(message: str, user_context: dict):
         return {
             "reply": clean_reply,
             "suggestedAction": suggested_action,
-            "engine": "Google Gemini 2.0 Flash (Live)"
+            "engine": "Google Gemini 2.0 Flash (Live)",
+            "isLiveGemini": True
         }
 
     # Rich Domain-Aware Algorithmic Intelligence Fallback
+    def _offline_resp(r, act):
+        return {
+            "reply": r,
+            "suggestedAction": act,
+            "engine": "Nexus Offline Heuristics Engine",
+            "isLiveGemini": False
+        }
+
     msg_lower = message_clean.lower()
 
     # 1. Bellman-Ford / Shortest Path / Negative Cycles
     if any(k in msg_lower for k in ["bellman", "negative cycle", "negative weight"]):
-        return {
-            "reply": (
-                "### ⚡ Bellman-Ford Algorithm In-Depth\n\n"
-                "• **Purpose**: Solves Single-Source Shortest Path (SSSP) on directed/undirected graphs that may contain **negative edge weights**, and detects **negative-weight cycles**.\n\n"
-                "• **Core Invariant**: In a graph with \\(|V|\\) vertices without negative cycles, any shortest path contains at most \\(|V| - 1\\) edges. Therefore, relaxing all \\(|E|\\) edges \\(|V| - 1\\) times guarantees optimal distances.\n\n"
-                "• **Time Complexity**: \\(O(V \\times E)\\)\n"
-                "• **Space Complexity**: \\(O(V)\\) for the distance array\n\n"
-                "```python\ndef bellman_ford(vertices, edges, source):\n    dist = {v: float('inf') for v in vertices}\n    dist[source] = 0\n\n    # Relax edges |V| - 1 times\n    for _ in range(len(vertices) - 1):\n        for u, v, w in edges:\n            if dist[u] + w < dist[v]:\n                dist[v] = dist[u] + w\n\n    # Detect negative cycle on |V|-th pass\n    for u, v, w in edges:\n        if dist[u] + w < dist[v]:\n            raise ValueError('Graph contains a negative-weight cycle!')\n    return dist\n```\n\n"
-                "💡 **When to choose**: Use **Dijkstra** \\(O((V+E)\\log V)\\) when weights are non-negative. Choose **Bellman-Ford** when negative weights are possible, or **SPFA** (Shortest Path Faster Algorithm) for average-case speedups."
-            ),
-            "suggestedAction": "View Assignment Starter Code"
-        }
+        return _offline_resp(
+            "### ⚡ Bellman-Ford Algorithm In-Depth\n\n"
+            "• **Purpose**: Solves Single-Source Shortest Path (SSSP) on directed/undirected graphs that may contain **negative edge weights**, and detects **negative-weight cycles**.\n\n"
+            "• **Core Invariant**: In a graph with \\(|V|\\) vertices without negative cycles, any shortest path contains at most \\(|V| - 1\\) edges. Therefore, relaxing all \\(|E|\\) edges \\(|V| - 1\\) times guarantees optimal distances.\n\n"
+            "• **Time Complexity**: \\(O(V \\times E)\\)\n"
+            "• **Space Complexity**: \\(O(V)\\) for the distance array\n\n"
+            "```python\ndef bellman_ford(vertices, edges, source):\n    dist = {v: float('inf') for v in vertices}\n    dist[source] = 0\n\n    # Relax edges |V| - 1 times\n    for _ in range(len(vertices) - 1):\n        for u, v, w in edges:\n            if dist[u] + w < dist[v]:\n                dist[v] = dist[u] + w\n\n    # Detect negative cycle on |V|-th pass\n    for u, v, w in edges:\n        if dist[u] + w < dist[v]:\n            raise ValueError('Graph contains a negative-weight cycle!')\n    return dist\n```\n\n"
+            "💡 **When to choose**: Use **Dijkstra** \\(O((V+E)\\log V)\\) when weights are non-negative. Choose **Bellman-Ford** when negative weights are possible, or **SPFA** (Shortest Path Faster Algorithm) for average-case speedups.",
+            "View Assignment Starter Code"
+        )
 
     # 2. Dynamic Programming / Memoization / Tabulation / Knapsack
     elif any(k in msg_lower for k in ["dynamic programming", " dp", "dp ", "memoiz", "tabulat", "knapsack", "lcs", "subsequence"]):
-        return {
-            "reply": (
-                "### 🧩 Dynamic Programming Mastery Guide\n\n"
-                "Dynamic Programming solves optimization problems by breaking them into **overlapping subproblems** that exhibit **optimal substructure**.\n\n"
-                "#### The 5-Step DP Framework:\n"
-                "1. **Define State**: Explicitly define what `dp[i][j]` represents in plain English (e.g., `dp[i]` = max profit using elements `0..i`).\n"
-                "2. **Base Cases**: Identify the simplest subproblems (e.g., empty array = 0, target 0 = true).\n"
-                "3. **State Transition**: Write the mathematical recurrence relation:\n"
-                "   `dp[i] = min/max(dp[i-1] + cost, ...)`\n"
-                "4. **Order of Computation**: Ensure subproblems are solved before their dependents (bottom-up) or use recursion with a memo cache.\n"
-                "5. **Space Optimization**: Check if the recurrence only looks back 1 or 2 rows; if so, compress 2D arrays into 1D.\n\n"
-                "```python\n# 0/1 Knapsack Space-Optimized O(N * W) time, O(W) space\ndef knapsack(weights, values, capacity):\n    dp = [0] * (capacity + 1)\n    for w, v in zip(weights, values):\n        # Iterate backward to prevent using same item multiple times\n        for c in range(capacity, w - 1, -1):\n            dp[c] = max(dp[c], dp[c - w] + v)\n    return dp[capacity]\n```"
-            ),
-            "suggestedAction": "Practice DP Problems"
-        }
+        return _offline_resp(
+            "### 🧩 Dynamic Programming Mastery Guide\n\n"
+            "Dynamic Programming solves optimization problems by breaking them into **overlapping subproblems** that exhibit **optimal substructure**.\n\n"
+            "#### The 5-Step DP Framework:\n"
+            "1. **Define State**: Explicitly define what `dp[i][j]` represents in plain English (e.g., `dp[i]` = max profit using elements `0..i`).\n"
+            "2. **Base Cases**: Identify the simplest subproblems (e.g., empty array = 0, target 0 = true).\n"
+            "3. **State Transition**: Write the mathematical recurrence relation:\n"
+            "   `dp[i] = min/max(dp[i-1] + cost, ...)`\n"
+            "4. **Order of Computation**: Ensure subproblems are solved before their dependents (bottom-up) or use recursion with a memo cache.\n"
+            "5. **Space Optimization**: Check if the recurrence only looks back 1 or 2 rows; if so, compress 2D arrays into 1D.\n\n"
+            "```python\n# 0/1 Knapsack Space-Optimized O(N * W) time, O(W) space\ndef knapsack(weights, values, capacity):\n    dp = [0] * (capacity + 1)\n    for w, v in zip(weights, values):\n        # Iterate backward to prevent using same item multiple times\n        for c in range(capacity, w - 1, -1):\n            dp[c] = max(dp[c], dp[c - w] + v)\n    return dp[capacity]\n```",
+            "Practice DP Problems"
+        )
 
     # 3. Binary Search / Two Pointers / Sliding Window
     elif any(k in msg_lower for k in ["binary search", "sliding window", "two pointer", "two sum"]):
@@ -478,17 +551,15 @@ def process_ai_chat_query(message: str, user_context: dict):
 
     # 12. Default Comprehensive Fallback
     else:
-        return {
-            "reply": (
-                f"### 💡 Nexus AI Insights on: \"{message_clean}\"\n\n"
-                f"Hello **{display_name}**! Here is a technical breakdown for your query:\n\n"
-                "• **Algorithmic Context**: When approaching this problem, first identify the underlying state model, input constraints (e.g., `N ≤ 10⁵` requires an `O(N log N)` or better strategy), and edge conditions.\n"
-                "• **Optimal Data Structures**: Consider using a **Hash Map / Set** for `O(1)` amortized lookups, a **Min/Max-Heap** for dynamic ranking, or **Two Pointers** if the input is sorted or can be ordered.\n"
-                f"• **Career Alignment**: For **{target_company}** technical rounds, always state your assumptions, outline brute force vs. optimal Big-O trade-offs, and test your code against empty/boundary inputs.\n\n"
-                "💡 *Feel free to ask for a specific code template, a step-by-step invariant breakdown, or practice in the interactive arena below!*"
-            ),
-            "suggestedAction": "Practice in Arena"
-        }
+        return _offline_resp(
+            f"### 💡 Nexus AI Insights on: \"{message_clean}\"\n\n"
+            f"Hello **{display_name}**! Here is a technical breakdown for your query:\n\n"
+            "• **Algorithmic Context**: When approaching this problem, first identify the underlying state model, input constraints (e.g., `N ≤ 10⁵` requires an `O(N log N)` or better strategy), and edge conditions.\n"
+            "• **Optimal Data Structures**: Consider using a **Hash Map / Set** for `O(1)` amortized lookups, a **Min/Max-Heap** for dynamic ranking, or **Two Pointers** if the input is sorted or can be ordered.\n"
+            f"• **Career Alignment**: For **{target_company}** technical rounds, always state your assumptions, outline brute force vs. optimal Big-O trade-offs, and test your code against empty/boundary inputs.\n\n"
+            "💡 *Feel free to ask for a specific code template, a step-by-step invariant breakdown, or practice in the interactive arena below!*",
+            "Practice in Arena"
+        )
 
 def get_assignment_ai_guidance(assignment_title: str, subject: str, description: str, student_query: str = ""):
     """
@@ -647,7 +718,13 @@ def play_ai_code_arena(code: str, mode: str = "roast", language: str = "python")
 
     res = call_gemini(prompt, system_instruction=system_instruction)
     if res:
-        return {"success": True, "mode": mode, "analysis": res}
+        return {
+            "success": True,
+            "mode": mode,
+            "analysis": res,
+            "isLiveGemini": True,
+            "engine": "Google Gemini 2.0 Flash (Live)"
+        }
 
     # Rich Offline Code-Aware Analysis Engine
     code_lower = code.lower()
@@ -881,7 +958,9 @@ def play_ai_mock_interview(topic: str, company: str = "Google", candidate_answer
                 "type": "question",
                 "topic": topic,
                 "company": company,
-                "content": res
+                "content": res,
+                "isLiveGemini": True,
+                "engine": "Google Gemini 2.0 Flash (Live)"
             }
 
         # Rich Authentic Challenge Bank
@@ -965,7 +1044,9 @@ def play_ai_mock_interview(topic: str, company: str = "Google", candidate_answer
                 "content": res,
                 "isHire": hire_awarded,
                 "xpBonus": 80 if hire_awarded else 30,
-                "coinsBonus": 40 if hire_awarded else 15
+                "coinsBonus": 40 if hire_awarded else 15,
+                "isLiveGemini": True,
+                "engine": "Google Gemini 2.0 Flash (Live)"
             }
 
         # Intelligent Candidate Answer Assessment

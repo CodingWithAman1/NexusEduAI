@@ -49,14 +49,79 @@ function formatAIChatMessage(text) {
     return formatted;
 }
 
-function openGeminiKeyModal() {
+async function updateAiStatusBadge() {
+    const badge = document.getElementById('gemini-copilot-badge');
+    const btnText = document.getElementById('gemini-connect-btn-text');
+    try {
+        const resp = await fetch('/api/ai/status');
+        const data = await resp.json();
+        if (badge) {
+            if (data.connected) {
+                badge.innerText = '⚡ Google Gemini 2.0 Flash (Live)';
+                badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 glow-primary';
+                if (btnText) btnText.innerText = 'Gemini Active ✓';
+            } else {
+                badge.innerText = '⚠️ Offline Heuristics Mode';
+                badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30';
+                if (btnText) btnText.innerText = 'Connect Gemini Key';
+            }
+        }
+        return data;
+    } catch (e) {
+        if (badge) {
+            badge.innerText = '⚡ AI Reasoning Engine';
+            badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30';
+        }
+    }
+}
+
+async function openGeminiKeyModal() {
     const modal = document.getElementById('gemini-key-modal');
+    const input = document.getElementById('gemini-api-key-input');
+    const statusEl = document.getElementById('gemini-key-status');
+    const disconnectBtn = document.getElementById('disconnect-gemini-key-btn');
     if (modal) modal.classList.remove('hidden');
+
+    try {
+        const resp = await fetch('/api/ai/status');
+        const data = await resp.json();
+        if (data.connected) {
+            if (statusEl) {
+                statusEl.classList.remove('hidden');
+                statusEl.innerHTML = `<span class="text-emerald-400 font-mono text-[11px]">✓ Gemini Active (${data.maskedKey || 'Cloud Key'})</span>`;
+            }
+            if (disconnectBtn) disconnectBtn.classList.remove('hidden');
+        } else {
+            if (statusEl) statusEl.classList.add('hidden');
+            if (disconnectBtn) disconnectBtn.classList.add('hidden');
+        }
+    } catch (e) {}
 }
 
 function closeGeminiKeyModal() {
     const modal = document.getElementById('gemini-key-modal');
     if (modal) modal.classList.add('hidden');
+}
+
+async function handleDisconnectGeminiKey() {
+    const statusEl = document.getElementById('gemini-key-status');
+    const input = document.getElementById('gemini-api-key-input');
+    if (statusEl) {
+        statusEl.classList.remove('hidden');
+        statusEl.innerHTML = '<span class="text-amber-300 font-mono text-[11px]">Disconnecting key...</span>';
+    }
+    try {
+        const resp = await fetch('/api/ai/disconnect-key', { method: 'POST' });
+        const data = await resp.json();
+        if (data.success) {
+            if (input) input.value = '';
+            showToast(data.message, 'info');
+            await updateAiStatusBadge();
+            setTimeout(() => closeGeminiKeyModal(), 800);
+        }
+    } catch (e) {
+        showToast('Failed to disconnect key', 'error');
+    }
 }
 
 async function handleSaveGeminiKey(e) {
@@ -88,11 +153,7 @@ async function handleSaveGeminiKey(e) {
                 statusEl.innerHTML = '<span class="text-emerald-400 font-bold font-mono text-[11px]">✓ ' + data.message + '</span>';
             }
             showToast('Google Gemini 2.0 Flash is connected & active!', 'success');
-            const badge = document.getElementById('gemini-copilot-badge');
-            if (badge) {
-                badge.innerText = '⚡ Gemini 2.0 Flash (Live)';
-                badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 glow-primary';
-            }
+            await updateAiStatusBadge();
             setTimeout(() => closeGeminiKeyModal(), 1200);
         } else {
             if (statusEl) {
@@ -1430,14 +1491,19 @@ async function handleSendAIChat() {
         const typingEl = document.getElementById(typingId);
         if (typingEl) typingEl.remove();
 
-        const actionBtn = data.suggestedAction ? `
-            <div class="mt-2.5 pt-2 border-t border-white/10 flex items-center justify-between text-[11px]">
-                <span class="text-indigo-400 font-mono text-[10px] flex items-center gap-1">✨ Powered by Google Gemini</span>
+        const engineLabel = data.isLiveGemini ?
+            `<span class="text-emerald-400 font-mono text-[10px] flex items-center gap-1 font-bold">✨ Powered by Google Gemini 2.0 Flash</span>` :
+            `<span class="text-amber-400/90 font-mono text-[10px] flex items-center gap-1 cursor-pointer hover:underline" onclick="openGeminiKeyModal()" title="Click to connect free Google Gemini API key">⚡ Offline Heuristics Engine • Connect Gemini ↗</span>`;
+
+        const actionBtn = `
+            <div class="mt-2.5 pt-2 border-t border-white/10 flex items-center justify-between text-[11px] gap-2 flex-wrap">
+                ${engineLabel}
+                ${data.suggestedAction ? `
                 <button onclick="handleSuggestedAction('${data.suggestedAction.replace(/'/g, "\\'")}')" class="px-2.5 py-1 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 font-bold border border-indigo-500/30 transition-colors">
                     ${data.suggestedAction} →
-                </button>
+                </button>` : ''}
             </div>
-        ` : '';
+        `;
 
         chatWindow.innerHTML += `
             <div class="flex justify-start mb-3">
@@ -1604,7 +1670,7 @@ async function verifyHandle(platform) {
         return;
     }
 
-    const username = inputEl.value.trim().replace(/^@+/, '').trim();
+    const username = inputEl.value.trim().replace(/^@+\s*/, '').trim();
     inputEl.value = username;
     if (badgeEl) {
         badgeEl.innerText = "Verifying...";
@@ -1613,9 +1679,9 @@ async function verifyHandle(platform) {
 
     try {
         const resp = await fetch(`/api/stats/verify-handle?platform=${encodeURIComponent(platform)}&username=${encodeURIComponent(username)}`);
-        const data = await resp.json();
+        const data = await resp.json().catch(() => ({}));
 
-        if (data.valid) {
+        if (resp.ok && data.valid) {
             if (badgeEl) {
                 badgeEl.innerText = data.isLive ? "Live Verified ✓" : "Verified ✓";
                 badgeEl.className = data.isLive ? "text-[10px] text-emerald-400 font-bold font-mono glow-primary" : "text-[10px] text-amber-300 font-bold font-mono";
@@ -1626,14 +1692,14 @@ async function verifyHandle(platform) {
                     detailsEl.innerHTML = `
                         <div class="flex items-center gap-2 p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-300">
                             <span>✓</span>
-                            <span><strong>${data.totalSolved}</strong> problems solved • Acceptance: <strong>${data.acceptanceRate}%</strong> • Rank <strong>#${data.ranking.toLocaleString()}</strong> <span class="text-[10px] text-slate-400 font-mono">(${data.isLive ? 'Live LeetCode GraphQL' : 'Demo Profile'})</span></span>
+                            <span><strong>${data.totalSolved}</strong> problems solved • Acceptance: <strong>${data.acceptanceRate}%</strong> • Rank <strong>#${(data.ranking || 0).toLocaleString()}</strong> <span class="text-[10px] text-slate-400 font-mono">(${data.isLive ? 'Live LeetCode GraphQL' : 'Demo Profile'})</span></span>
                         </div>
                     `;
                 } else {
                     detailsEl.innerHTML = `
                         <div class="flex items-center gap-2 p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-300">
                             <span>✓</span>
-                            <span><strong>${data.name || data.username}</strong>: <strong>${data.publicRepos}</strong> public repos • <strong>${data.stars}</strong> stars • <strong>${data.commits}</strong> commits <span class="text-[10px] text-slate-400 font-mono">(${data.isLive ? 'Live GitHub REST API' : 'Demo Profile'})</span></span>
+                            <span><strong>${data.name || data.username}</strong>: <strong>${data.publicRepos}</strong> public repos • <strong>${data.stars}</strong> stars • <strong>${data.commits}</strong> commits <span class="text-[10px] text-slate-400 font-mono">(${data.isLive ? 'Live GitHub REST API' : 'Verified Profile'})</span></span>
                         </div>
                     `;
                 }
@@ -1645,13 +1711,17 @@ async function verifyHandle(platform) {
             }
             if (detailsEl) {
                 detailsEl.classList.remove('hidden');
-                detailsEl.innerHTML = `<span class="text-rose-400">${data.message || 'Could not verify username'}</span>`;
+                detailsEl.innerHTML = `<span class="text-rose-400">${data.message || data.error || 'Could not verify username'}</span>`;
             }
         }
     } catch (e) {
         if (badgeEl) {
-            badgeEl.innerText = "Ready to link";
-            badgeEl.className = "text-[10px] text-slate-400 font-mono";
+            badgeEl.innerText = "Check error";
+            badgeEl.className = "text-[10px] text-rose-400 font-mono";
+        }
+        if (detailsEl) {
+            detailsEl.classList.remove('hidden');
+            detailsEl.innerHTML = `<span class="text-rose-400">Network error while verifying handle</span>`;
         }
     }
 }
@@ -1662,8 +1732,8 @@ async function handleConnectAccountsSubmit(e) {
     const ghInput = document.getElementById('connect-gh-input');
     const submitBtn = document.getElementById('save-connect-btn');
 
-    const lcUser = lcInput ? lcInput.value.trim().replace(/^@+/, '').trim() : '';
-    const ghUser = ghInput ? ghInput.value.trim().replace(/^@+/, '').trim() : '';
+    const lcUser = lcInput ? lcInput.value.trim().replace(/^@+\s*/, '').trim() : '';
+    const ghUser = ghInput ? ghInput.value.trim().replace(/^@+\s*/, '').trim() : '';
 
     if (!lcUser && !ghUser) {
         showToast("Please enter at least one username.", "error");

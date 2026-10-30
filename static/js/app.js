@@ -39,6 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadAssignments();
     loadNotices();
     loadAIAnalysis();
+    if (typeof updateAiStatusBadge === 'function') updateAiStatusBadge();
     loadLeaderboard();
     loadShopItems('all');
     loadAchievements();
@@ -158,6 +159,7 @@ function switchTab(tabId) {
     }
     if (tabId === 'ai-hub') {
         if (typeof loadAIAnalysis === 'function') loadAIAnalysis();
+        if (typeof updateAiStatusBadge === 'function') updateAiStatusBadge();
     }
     if (tabId === 'leaderboard') loadLeaderboard();
 }

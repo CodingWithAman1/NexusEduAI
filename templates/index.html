@@ -832,9 +832,9 @@
                             <div>
                                 <div class="flex items-center gap-2 flex-wrap">
                                     <h3 class="font-bold text-white text-base">Nexus AI Coding Copilot</h3>
-                                    <span id="gemini-copilot-badge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 glow-indigo">⚡ Powered by Google Gemini</span>
+                                    <span id="gemini-copilot-badge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">⚡ Checking AI Status...</span>
                                     <button type="button" onclick="openGeminiKeyModal()" class="px-2.5 py-0.5 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 text-cyan-300 border border-cyan-500/30 text-[10px] font-bold transition-all flex items-center gap-1 shadow-sm" title="Configure or update Gemini API Key">
-                                        <span>🔑</span> <span>Connect Gemini Key</span>
+                                        <span>🔑</span> <span id="gemini-connect-btn-text">Connect Gemini Key</span>
                                     </button>
                                 </div>
                                 <p class="text-[11px] text-slate-400">Ask algorithmic questions, request code reviews, or get coursework breakdowns</p>
@@ -1484,13 +1484,18 @@
                     <input type="password" id="gemini-api-key-input" placeholder="AIzaSy..." class="w-full bg-slate-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-white text-xs font-mono focus:outline-none focus:border-indigo-500">
                 </div>
                 <div id="gemini-key-status" class="hidden text-xs py-1"></div>
-                <div class="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
-                    <button type="button" onclick="closeGeminiKeyModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs transition-colors">
-                        Cancel
+                <div class="flex items-center justify-between gap-2 pt-2 border-t border-white/10">
+                    <button type="button" id="disconnect-gemini-key-btn" onclick="handleDisconnectGeminiKey()" class="hidden px-3 py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 font-semibold text-xs transition-colors">
+                        Disconnect Key
                     </button>
-                    <button type="submit" id="save-gemini-key-btn" class="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-extrabold text-xs shadow-md shadow-indigo-600/30 transition-all">
-                        Validate & Connect Key
-                    </button>
+                    <div class="flex items-center gap-2 ml-auto">
+                        <button type="button" onclick="closeGeminiKeyModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs transition-colors">
+                            Cancel
+                        </button>
+                        <button type="submit" id="save-gemini-key-btn" class="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-extrabold text-xs shadow-md shadow-indigo-600/30 transition-all">
+                            Validate & Connect Key
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>
